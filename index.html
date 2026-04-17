@@ -31,7 +31,7 @@ video {
   object-fit: cover;
 }
 
-/* tombol play/pause */
+/* tombol video player standar */
 .control-btn {
   position: absolute;
   top: 50%;
@@ -41,6 +41,12 @@ video {
   color: white;
   cursor: pointer;
   z-index: 10;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  user-select: none;
+}
+
+.control-btn.show {
   opacity: 0.9;
 }
 
@@ -85,7 +91,7 @@ const feed = document.getElementById("feed");
 let items = [];
 
 // render
-videos.forEach((v, index) => {
+videos.forEach(v => {
 
   feed.innerHTML += `
     <div class="video-item">
@@ -93,13 +99,13 @@ videos.forEach((v, index) => {
       <video 
         src="${v.src}" 
         poster="${v.thumb}" 
-        preload="none"
         playsinline>
       </video>
 
       <div class="control-btn">▶</div>
 
       <div class="duration">${v.duration}</div>
+
       <div class="gradient"></div>
 
       <div class="info">
@@ -113,73 +119,72 @@ videos.forEach((v, index) => {
 
 items = document.querySelectorAll(".video-item");
 
-// STATE
-let currentIndex = 0;
-
-// HANDLE BUTTON (PLAY/PAUSE TOGGLE)
+// UX CONTROL
 items.forEach((item, index) => {
 
   const video = item.querySelector("video");
   const btn = item.querySelector(".control-btn");
 
-  const iconPlay = "▶";
-  const iconPause = "❚❚";
+  let hideTimer;
 
-  // INIT icon
-  btn.textContent = iconPlay;
+  function showBtn() {
+    btn.classList.add("show");
+    clearTimeout(hideTimer);
 
-  btn.addEventListener("click", () => {
+    hideTimer = setTimeout(() => {
+      btn.classList.remove("show");
+    }, 1500);
+  }
+
+  // TAP VIDEO / BUTTON → SHOW CONTROL
+  item.addEventListener("click", () => {
+
+    showBtn();
 
     if (video.paused) {
       video.play().catch(()=>{});
+      btn.textContent = "❚❚";
     } else {
       video.pause();
+      btn.textContent = "▶";
     }
 
   });
 
-  // PLAY EVENT
+  // sync icon state
   video.addEventListener("play", () => {
-    btn.style.display = "none";
+    btn.textContent = "❚❚";
   });
 
-  // PAUSE EVENT
   video.addEventListener("pause", () => {
-    btn.style.display = "block";
-    btn.textContent = iconPlay;
+    btn.textContent = "▶";
   });
 
 });
 
-// AUTO PLAY LOGIC (HOME vs NEXT)
+// AUTO PLAY SYSTEM (HOME vs NEXT)
 const observer = new IntersectionObserver((entries) => {
 
   entries.forEach(entry => {
 
     const video = entry.target.querySelector("video");
-    const btn = entry.target.querySelector(".control-btn");
     const index = [...items].indexOf(entry.target);
 
     if (entry.isIntersecting && entry.intersectionRatio > 0.7) {
 
-      // STOP video lain
       document.querySelectorAll("video").forEach(v => {
         if (v !== video) v.pause();
       });
 
-      // 🔥 RULE HOME: video pertama tidak auto play
+      // HOME manual only
       if (index === 0) {
         video.pause();
-        btn.style.display = "block";
-        btn.textContent = "▶";
       }
 
-      // 🔥 RULE VIDEO SETELAHNYA: auto play
+      // NEXT auto play
       if (index > 0) {
         video.play().catch(()=>{});
       }
-
-      currentIndex = index;
 
     } else {
       video.pause();
@@ -191,7 +196,6 @@ const observer = new IntersectionObserver((entries) => {
   threshold: 0.7
 });
 
-// observe semua
 items.forEach(item => observer.observe(item));
 </script>
 
