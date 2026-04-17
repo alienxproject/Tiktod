@@ -19,11 +19,6 @@ body {
   scroll-snap-type: y mandatory;
 }
 
-/* hide scrollbar */
-.feed::-webkit-scrollbar {
-  display: none;
-}
-
 .video-item {
   height: 100vh;
   position: relative;
@@ -36,17 +31,17 @@ video {
   object-fit: cover;
 }
 
-/* tombol selalu ada */
-.play-btn {
+/* tombol play/pause */
+.control-btn {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-size: 50px;
+  font-size: 55px;
   color: white;
   cursor: pointer;
   z-index: 10;
-  opacity: 0.8;
+  opacity: 0.9;
 }
 
 .duration {
@@ -87,11 +82,11 @@ video {
 <script>
 const feed = document.getElementById("feed");
 
-let videosEl = [];
-let currentIndex = 0;
+let items = [];
 
 // render
 videos.forEach((v, index) => {
+
   feed.innerHTML += `
     <div class="video-item">
 
@@ -99,11 +94,10 @@ videos.forEach((v, index) => {
         src="${v.src}" 
         poster="${v.thumb}" 
         preload="none"
-        playsinline
-        muted>
+        playsinline>
       </video>
 
-      <div class="play-btn">▶</div>
+      <div class="control-btn">▶</div>
 
       <div class="duration">${v.duration}</div>
       <div class="gradient"></div>
@@ -117,16 +111,23 @@ videos.forEach((v, index) => {
   `;
 });
 
-// ambil semua video & tombol
-videosEl = document.querySelectorAll(".video-item");
+items = document.querySelectorAll(".video-item");
 
-// PLAY BUTTON CONTROL
-videosEl.forEach((item, index) => {
+// STATE
+let currentIndex = 0;
+
+// HANDLE BUTTON (PLAY/PAUSE TOGGLE)
+items.forEach((item, index) => {
 
   const video = item.querySelector("video");
-  const btn = item.querySelector(".play-btn");
+  const btn = item.querySelector(".control-btn");
 
-  // play / pause toggle manual
+  const iconPlay = "▶";
+  const iconPause = "❚❚";
+
+  // INIT icon
+  btn.textContent = iconPlay;
+
   btn.addEventListener("click", () => {
 
     if (video.paused) {
@@ -137,32 +138,50 @@ videosEl.forEach((item, index) => {
 
   });
 
+  // PLAY EVENT
+  video.addEventListener("play", () => {
+    btn.style.display = "none";
+  });
+
+  // PAUSE EVENT
+  video.addEventListener("pause", () => {
+    btn.style.display = "block";
+    btn.textContent = iconPlay;
+  });
+
 });
 
-// AUTO PLAY SAAT SCROLL (INTI LOGIC TIKTOK)
+// AUTO PLAY LOGIC (HOME vs NEXT)
 const observer = new IntersectionObserver((entries) => {
 
   entries.forEach(entry => {
 
     const video = entry.target.querySelector("video");
+    const btn = entry.target.querySelector(".control-btn");
+    const index = [...items].indexOf(entry.target);
 
     if (entry.isIntersecting && entry.intersectionRatio > 0.7) {
 
-      // stop semua video lain
+      // STOP video lain
       document.querySelectorAll("video").forEach(v => {
-        if (v !== video) {
-          v.pause();
-          v.currentTime = v.currentTime; // tetap posisi
-        }
+        if (v !== video) v.pause();
       });
 
-      // auto play video aktif
-      video.play().catch(()=>{});
+      // 🔥 RULE HOME: video pertama tidak auto play
+      if (index === 0) {
+        video.pause();
+        btn.style.display = "block";
+        btn.textContent = "▶";
+      }
 
-      currentIndex = [...videosEl].indexOf(entry.target);
+      // 🔥 RULE VIDEO SETELAHNYA: auto play
+      if (index > 0) {
+        video.play().catch(()=>{});
+      }
+
+      currentIndex = index;
 
     } else {
-      // kalau keluar layar → stop
       video.pause();
     }
 
@@ -172,8 +191,8 @@ const observer = new IntersectionObserver((entries) => {
   threshold: 0.7
 });
 
-// observe semua video item
-videosEl.forEach(item => observer.observe(item));
+// observe semua
+items.forEach(item => observer.observe(item));
 </script>
 
 </body>
