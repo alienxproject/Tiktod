@@ -11,7 +11,7 @@ var videos = [
   {
     id: 2,
     src: "https://cdn2.aceimg.com/5a2fcc785.mp4",
-    thumb: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQJ4MqwCuTUaLPwx2O-J0HTQEduzy-fnEKyyz2B2NRy-A&s=10",
+    thumb: "",
     title: "Ternyata ini yang disembunyikan...",
     views: "9.4K views",
     duration: "6:11",
