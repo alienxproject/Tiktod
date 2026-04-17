@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TikTod</title>
+<title>Reels Player</title>
 
 <style>
 body {
@@ -40,6 +39,7 @@ video {
   font-size: 50px;
   color: white;
   cursor: pointer;
+  z-index: 5;
 }
 
 .duration {
@@ -67,6 +67,7 @@ video {
   left: 10px;
   right: 10px;
   color: white;
+  z-index: 3;
 }
 
 .info h3 {
@@ -93,22 +94,24 @@ video {
 <script>
 const feed = document.getElementById("feed");
 
-let hasTriggered = false;
-let hasRedirected = false;
-let timer = null;
+// TRACK STATUS
+let redirected = new Set();
+let userPlayed = new Set();
 
-videos.forEach(v => {
+// RENDER VIDEO
+videos.forEach((v, index) => {
+
   feed.innerHTML += `
     <div class="video-item">
 
       <video 
         src="${v.src}" 
         poster="${v.thumb}" 
-        preload="none">
+        preload="none"
+        playsinline>
       </video>
 
       <div class="duration">${v.duration}</div>
-
       <div class="gradient"></div>
 
       <div class="info">
@@ -116,34 +119,57 @@ videos.forEach(v => {
         <span class="views">${v.views}</span>
       </div>
 
-      <div class="play-btn" onclick="playVideo(this, '${v.cta}')">▶</div>
+      <div class="play-btn">▶</div>
 
     </div>
   `;
 });
 
-function playVideo(btn, link){
+// PLAY HANDLER
+document.querySelectorAll(".play-btn").forEach((btn, index) => {
+
   const container = btn.parentElement;
   const video = container.querySelector("video");
+  const link = videos[index].cta;
 
-  video.play();
-  btn.style.display = "none";
+  // PLAY
+  btn.addEventListener("click", function () {
 
-  if(hasRedirected) return;
+    userPlayed.add(index);
 
-  if(!hasTriggered){
-    timer = setTimeout(() => {
-      video.pause();
-      hasTriggered = true;
-    }, 5000);
-  } else {
-    hasRedirected = true;
+    const playPromise = video.play();
+    if (playPromise) playPromise.catch(() => {});
+
+    this.style.display = "none";
+
+  });
+
+  // PAUSE (HANYA USER VALID)
+  video.addEventListener("pause", function () {
+
+    // ❌ skip kalau belum pernah user play
+    if (!userPlayed.has(index)) return;
+
+    // ❌ skip kalau scroll/system pause awal
+    if (video.currentTime < 1) return;
+
+    // ❌ hanya sekali redirect per video
+    if (redirected.has(index)) return;
+
+    redirected.add(index);
+
     window.location.href = link;
-  }
 
-  video.onpause = () => clearTimeout(timer);
-}
+  });
 
+  // kalau video habis → tombol muncul lagi
+  video.addEventListener("ended", () => {
+    btn.style.display = "block";
+  });
+
+});
+
+// PAUSE SAAT SCROLL (TIDAK TRIGGER REDIRECT)
 window.addEventListener("scroll", () => {
   document.querySelectorAll("video").forEach(v => v.pause());
 });
