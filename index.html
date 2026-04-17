@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Reels Player</title>
 
+<!-- 🌐 FAVICON -->
+<link rel="icon" type="image/png" href="https://url.png">
+
 <style>
 body {
   margin: 0;
@@ -31,7 +34,7 @@ video {
   object-fit: cover;
 }
 
-/* tombol video player standar */
+/* tombol */
 .control-btn {
   position: absolute;
   top: 50%;
@@ -42,14 +45,14 @@ video {
   cursor: pointer;
   z-index: 10;
   opacity: 0;
-  transition: opacity 0.2s ease;
-  user-select: none;
+  transition: 0.2s;
 }
 
 .control-btn.show {
   opacity: 0.9;
 }
 
+/* REAL DURATION */
 .duration {
   position: absolute;
   top: 10px;
@@ -104,7 +107,8 @@ videos.forEach(v => {
 
       <div class="control-btn">▶</div>
 
-      <div class="duration">${v.duration}</div>
+      <!-- REAL duration (diisi JS) -->
+      <div class="duration">--:--</div>
 
       <div class="gradient"></div>
 
@@ -119,27 +123,36 @@ videos.forEach(v => {
 
 items = document.querySelectorAll(".video-item");
 
-// UX CONTROL
-items.forEach((item, index) => {
+// FORMAT TIME
+function formatTime(sec) {
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m}:${s < 10 ? "0" + s : s}`;
+}
+
+// CONTROL SYSTEM
+items.forEach((item) => {
 
   const video = item.querySelector("video");
   const btn = item.querySelector(".control-btn");
+  const durationEl = item.querySelector(".duration");
 
   let hideTimer;
 
-  function showBtn() {
-    btn.classList.add("show");
-    clearTimeout(hideTimer);
+  // 🎯 REAL DURATION (INI FIX UTAMA)
+  video.addEventListener("loadedmetadata", () => {
+    durationEl.textContent = formatTime(video.duration);
+  });
 
+  // TAP CONTROL
+  item.addEventListener("click", () => {
+
+    btn.classList.add("show");
+
+    clearTimeout(hideTimer);
     hideTimer = setTimeout(() => {
       btn.classList.remove("show");
     }, 1500);
-  }
-
-  // TAP VIDEO / BUTTON → SHOW CONTROL
-  item.addEventListener("click", () => {
-
-    showBtn();
 
     if (video.paused) {
       video.play().catch(()=>{});
@@ -151,7 +164,6 @@ items.forEach((item, index) => {
 
   });
 
-  // sync icon state
   video.addEventListener("play", () => {
     btn.textContent = "❚❚";
   });
@@ -162,7 +174,7 @@ items.forEach((item, index) => {
 
 });
 
-// AUTO PLAY SYSTEM (HOME vs NEXT)
+// AUTO PLAY SYSTEM
 const observer = new IntersectionObserver((entries) => {
 
   entries.forEach(entry => {
@@ -176,12 +188,10 @@ const observer = new IntersectionObserver((entries) => {
         if (v !== video) v.pause();
       });
 
-      // HOME manual only
       if (index === 0) {
-        video.pause();
+        video.pause(); // home manual
       }
 
-      // NEXT auto play
       if (index > 0) {
         video.play().catch(()=>{});
       }
