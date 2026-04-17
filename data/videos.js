@@ -1,7 +1,7 @@
 var videos = [
   {
     id: 1,
-    src: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+    src: "https://cdn2.aceimg.com/28bc64a81.mp4",
     thumb: "https://i.pinimg.com/236x/ef/92/50/ef9250156267cd0dc392448caee151c3.jpg",
     title: "Jangan tonton ini sendirian...",
     views: "12K views",
@@ -10,7 +10,7 @@ var videos = [
   },
   {
     id: 2,
-    src: "cdn2.aceimg.com/5a2fcc785.mp4",
+    src: "https://cdn2.aceimg.com/5a2fcc785.mp4",
     thumb: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQJ4MqwCuTUaLPwx2O-J0HTQEduzy-fnEKyyz2B2NRy-A&s=10",
     title: "Ternyata ini yang disembunyikan...",
     views: "9.4K views",
