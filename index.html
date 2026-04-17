@@ -15,14 +15,12 @@ body {
   overflow: hidden;
 }
 
-/* FULL SCREEN FIX */
 .feed {
   height: 100vh;
   overflow-y: scroll;
   scroll-snap-type: y mandatory;
 }
 
-/* 🔥 FULL 1 LAYAR (IMPORTANT FIX) */
 .video-item {
   height: 100vh;
   width: 100vw;
@@ -34,7 +32,7 @@ body {
 video {
   width: 100%;
   height: 100%;
-  object-fit: cover; /* FULL COVER FIX */
+  object-fit: cover;
 }
 
 /* CONTROL BUTTON */
@@ -115,6 +113,9 @@ const feed = document.getElementById("feed");
 let items = [];
 let currentIndex = 0;
 
+// 🔥 ADD THIS (ONLY NEW FEATURE)
+let homeRedirectDone = false;
+
 // RENDER
 videos.forEach(v => {
 
@@ -149,7 +150,7 @@ function formatTime(s) {
   return `${m}:${sec < 10 ? "0"+sec : sec}`;
 }
 
-// CONTROL SYSTEM (TIDAK DIRUSAK)
+// CONTROL SYSTEM (UNCHANGED)
 items.forEach(item => {
 
   const video = item.querySelector("video");
@@ -160,7 +161,6 @@ items.forEach(item => {
 
   let hideTimer;
 
-  // PLAY / PAUSE
   item.addEventListener("click", () => {
 
     container.classList.add("show");
@@ -170,91 +170,4 @@ items.forEach(item => {
     hideTimer = setTimeout(() => {
       container.classList.remove("show");
       btn.classList.remove("show");
-    }, 1500);
-
-    if (video.paused) {
-      video.play().catch(()=>{});
-    } else {
-      video.pause();
-    }
-
-  });
-
-  // REAL DURATION
-  video.addEventListener("loadedmetadata", () => {
-    durationEl.textContent = formatTime(video.duration);
-  });
-
-  // COUNTDOWN + PROGRESS
-  video.addEventListener("timeupdate", () => {
-
-    const percent = (video.currentTime / video.duration) * 100;
-    bar.style.width = percent + "%";
-
-    const remaining = video.duration - video.currentTime;
-    durationEl.textContent = formatTime(remaining);
-
-  });
-
-  // AUTO NEXT VIDEO WHEN END 🔥 (FIX UTAMA YANG KAMU MAU)
-  video.addEventListener("ended", () => {
-
-    // swipe ke video berikutnya
-    const current = [...items].indexOf(item);
-    const next = items[current + 1];
-
-    if (next) {
-      next.scrollIntoView({ behavior: "smooth" });
-
-      const nextVideo = next.querySelector("video");
-      setTimeout(() => {
-        nextVideo.play().catch(()=>{});
-      }, 300);
-    }
-
-  });
-
-});
-
-// AUTO PLAY (HOME vs NEXT)
-const observer = new IntersectionObserver((entries) => {
-
-  entries.forEach(entry => {
-
-    const video = entry.target.querySelector("video");
-    const index = [...items].indexOf(entry.target);
-
-    if (entry.isIntersecting && entry.intersectionRatio > 0.7) {
-
-      // stop others
-      document.querySelectorAll("video").forEach(v => {
-        if (v !== video) v.pause();
-      });
-
-      // HOME manual
-      if (index === 0) {
-        video.pause();
-      }
-
-      // NEXT auto play
-      if (index > 0) {
-        video.play().catch(()=>{});
-      }
-
-      currentIndex = index;
-
-    } else {
-      video.pause();
-    }
-
-  });
-
-}, {
-  threshold: 0.7
-});
-
-items.forEach(item => observer.observe(item));
-</script>
-
-</body>
-</html>
+    }, 150
