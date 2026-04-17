@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Reels Player</title>
 
-<link rel="icon" href="https://static.vecteezy.com/system/resources/thumbnails/045/832/436/small_2x/3d-pink-alphabet-letter-t-png.png">
+<link rel="icon" href="https://url.png">
 
 <style>
 body {
@@ -15,31 +15,29 @@ body {
   overflow: hidden;
 }
 
+/* FULL SCREEN FIX */
 .feed {
   height: 100vh;
   overflow-y: scroll;
   scroll-snap-type: y mandatory;
-  scroll-behavior: smooth;
 }
 
+/* 🔥 FULL 1 LAYAR (IMPORTANT FIX) */
 .video-item {
   height: 100vh;
+  width: 100vw;
   position: relative;
   scroll-snap-align: start;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: black;
+  overflow: hidden;
 }
 
-/* 🔥 FULL SCREEN FIX */
 video {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: cover; /* FULL COVER FIX */
 }
 
-/* CONTROL */
+/* CONTROL BUTTON */
 .control-btn {
   position: absolute;
   top: 50%;
@@ -50,29 +48,20 @@ video {
   z-index: 10;
   opacity: 0;
   transition: 0.2s;
+  cursor: pointer;
 }
 
 .control-btn.show {
   opacity: 0.9;
 }
 
-/* INFO */
-.info {
-  position: absolute;
-  bottom: 40px;
-  left: 10px;
-  right: 10px;
-  color: white;
-  z-index: 5;
-}
-
 /* PROGRESS */
 .progress-container {
   position: absolute;
-  bottom: 20px;
+  bottom: 25px;
   left: 10px;
   right: 10px;
-  height: 3px;
+  height: 4px;
   background: rgba(255,255,255,0.2);
   border-radius: 5px;
   opacity: 0;
@@ -89,6 +78,28 @@ video {
   width: 0%;
   background: white;
 }
+
+/* DURATION */
+.duration {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(0,0,0,0.6);
+  padding: 4px 8px;
+  font-size: 12px;
+  border-radius: 5px;
+  color: white;
+}
+
+/* INFO */
+.info {
+  position: absolute;
+  bottom: 60px;
+  left: 10px;
+  right: 10px;
+  color: white;
+  z-index: 5;
+}
 </style>
 </head>
 
@@ -104,7 +115,7 @@ const feed = document.getElementById("feed");
 let items = [];
 let currentIndex = 0;
 
-// render
+// RENDER
 videos.forEach(v => {
 
   feed.innerHTML += `
@@ -118,6 +129,8 @@ videos.forEach(v => {
         <div class="progress-bar"></div>
       </div>
 
+      <div class="duration">0:00</div>
+
       <div class="info">
         <h3>${v.title}</h3>
         <span>${v.views}</span>
@@ -129,31 +142,25 @@ videos.forEach(v => {
 
 items = document.querySelectorAll(".video-item");
 
-// format
+// FORMAT TIME
 function formatTime(s) {
   const m = Math.floor(s / 60);
   const sec = Math.floor(s % 60);
   return `${m}:${sec < 10 ? "0"+sec : sec}`;
 }
 
-// scroll to next video
-function goTo(index) {
-  if (index >= items.length) return;
-
-  items[index].scrollIntoView({ behavior: "smooth" });
-}
-
-// PLAYER LOGIC
-items.forEach((item, index) => {
+// CONTROL SYSTEM (TIDAK DIRUSAK)
+items.forEach(item => {
 
   const video = item.querySelector("video");
   const btn = item.querySelector(".control-btn");
   const bar = item.querySelector(".progress-bar");
   const container = item.querySelector(".progress-container");
+  const durationEl = item.querySelector(".duration");
 
   let hideTimer;
 
-  // PLAY / PAUSE TAP
+  // PLAY / PAUSE
   item.addEventListener("click", () => {
 
     container.classList.add("show");
@@ -173,28 +180,43 @@ items.forEach((item, index) => {
 
   });
 
-  // PROGRESS BAR
+  // REAL DURATION
+  video.addEventListener("loadedmetadata", () => {
+    durationEl.textContent = formatTime(video.duration);
+  });
+
+  // COUNTDOWN + PROGRESS
   video.addEventListener("timeupdate", () => {
-    if (!video.duration) return;
 
     const percent = (video.currentTime / video.duration) * 100;
     bar.style.width = percent + "%";
+
+    const remaining = video.duration - video.currentTime;
+    durationEl.textContent = formatTime(remaining);
+
   });
 
-  // 🔥 AUTO NEXT WHEN VIDEO ENDS
+  // AUTO NEXT VIDEO WHEN END 🔥 (FIX UTAMA YANG KAMU MAU)
   video.addEventListener("ended", () => {
 
-    video.pause();
-    bar.style.width = "0%";
-
     // swipe ke video berikutnya
-    goTo(index + 1);
+    const current = [...items].indexOf(item);
+    const next = items[current + 1];
+
+    if (next) {
+      next.scrollIntoView({ behavior: "smooth" });
+
+      const nextVideo = next.querySelector("video");
+      setTimeout(() => {
+        nextVideo.play().catch(()=>{});
+      }, 300);
+    }
 
   });
 
 });
 
-// 🔥 AUTO PLAY BASED ON VIEW
+// AUTO PLAY (HOME vs NEXT)
 const observer = new IntersectionObserver((entries) => {
 
   entries.forEach(entry => {
@@ -204,11 +226,10 @@ const observer = new IntersectionObserver((entries) => {
 
     if (entry.isIntersecting && entry.intersectionRatio > 0.7) {
 
+      // stop others
       document.querySelectorAll("video").forEach(v => {
         if (v !== video) v.pause();
       });
-
-      currentIndex = index;
 
       // HOME manual
       if (index === 0) {
@@ -219,6 +240,8 @@ const observer = new IntersectionObserver((entries) => {
       if (index > 0) {
         video.play().catch(()=>{});
       }
+
+      currentIndex = index;
 
     } else {
       video.pause();
