@@ -96,11 +96,12 @@ video {
 <script>
 const feed = document.getElementById("feed");
 
-// STATE PER VIDEO (bukan global lagi)
-let activeTimer = null;
-let redirectDone = new Set();
+// track redirect per video
+let redirected = new Set();
 
-videos.forEach(v => {
+// RENDER VIDEO
+videos.forEach((v, index) => {
+
   feed.innerHTML += `
     <div class="video-item">
 
@@ -108,8 +109,8 @@ videos.forEach(v => {
         src="${v.src}" 
         poster="${v.thumb}" 
         preload="none"
-        playsinline
-      ></video>
+        playsinline>
+      </video>
 
       <div class="duration">${v.duration}</div>
       <div class="gradient"></div>
@@ -125,51 +126,35 @@ videos.forEach(v => {
   `;
 });
 
-// PLAY HANDLER (FIX UTAMA)
+// HANDLE PLAY
 document.querySelectorAll(".play-btn").forEach((btn, index) => {
 
+  const container = btn.parentElement;
+  const video = container.querySelector("video");
+  const link = videos[index].cta;
+
+  // PLAY
   btn.addEventListener("click", function () {
 
-    const container = this.parentElement;
-    const video = container.querySelector("video");
-    const link = videos[index].cta;
-
-    // play aman (handle error silent)
     const playPromise = video.play();
-
-    if (playPromise !== undefined) {
-      playPromise.catch(err => {
-        console.log("Play error:", err);
-      });
-    }
+    if (playPromise) playPromise.catch(() => {});
 
     this.style.display = "none";
 
-    // kalau sudah redirect untuk video ini → stop
-    if (redirectDone.has(index)) return;
+  });
 
-    // reset timer sebelumnya
-    clearTimeout(activeTimer);
+  // PAUSE → REDIRECT
+  video.addEventListener("pause", function () {
 
-    activeTimer = setTimeout(() => {
+    // ignore kalau belum sempat play
+    if (video.currentTime < 1) return;
 
-      video.pause();
-      redirectDone.add(index); // hanya video ini yg kena
+    // hanya sekali per video
+    if (redirected.has(index)) return;
 
-    }, 5000);
+    redirected.add(index);
 
-    // kalau user klik play lagi setelah pause → redirect
-    video.addEventListener("play", function onceRedirect() {
-
-      if (redirectDone.has(index)) {
-        window.location.href = link;
-      }
-
-    }, { once: true });
-
-    video.onpause = () => {
-      clearTimeout(activeTimer);
-    };
+    window.location.href = link;
 
   });
 
