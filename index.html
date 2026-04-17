@@ -39,6 +39,7 @@ video {
   font-size: 50px;
   color: white;
   cursor: pointer;
+  z-index: 5;
 }
 
 .duration {
@@ -50,6 +51,7 @@ video {
   font-size: 12px;
   border-radius: 5px;
   color: white;
+  z-index: 3;
 }
 
 .gradient {
@@ -58,6 +60,7 @@ video {
   width:100%;
   height:120px;
   background:linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+  z-index: 2;
 }
 
 .info {
@@ -66,6 +69,7 @@ video {
   left: 10px;
   right: 10px;
   color: white;
+  z-index: 3;
 }
 
 .info h3 {
@@ -92,9 +96,9 @@ video {
 <script>
 const feed = document.getElementById("feed");
 
-let hasTriggered = false;
-let hasRedirected = false;
-let timer = null;
+// STATE PER VIDEO (bukan global lagi)
+let activeTimer = null;
+let redirectDone = new Set();
 
 videos.forEach(v => {
   feed.innerHTML += `
@@ -103,11 +107,11 @@ videos.forEach(v => {
       <video 
         src="${v.src}" 
         poster="${v.thumb}" 
-        preload="none">
-      </video>
+        preload="none"
+        playsinline
+      ></video>
 
       <div class="duration">${v.duration}</div>
-
       <div class="gradient"></div>
 
       <div class="info">
@@ -115,38 +119,67 @@ videos.forEach(v => {
         <span class="views">${v.views}</span>
       </div>
 
-      <div class="play-btn" onclick="playVideo(this, '${v.cta}')">▶</div>
+      <div class="play-btn">▶</div>
 
     </div>
   `;
 });
 
-function playVideo(btn, link){
-  const container = btn.parentElement;
-  const video = container.querySelector("video");
+// PLAY HANDLER (FIX UTAMA)
+document.querySelectorAll(".play-btn").forEach((btn, index) => {
 
-  video.play();
-  btn.style.display = "none";
+  btn.addEventListener("click", function () {
 
-  if(hasRedirected) return;
+    const container = this.parentElement;
+    const video = container.querySelector("video");
+    const link = videos[index].cta;
 
-  if(!hasTriggered){
-    timer = setTimeout(() => {
+    // play aman (handle error silent)
+    const playPromise = video.play();
+
+    if (playPromise !== undefined) {
+      playPromise.catch(err => {
+        console.log("Play error:", err);
+      });
+    }
+
+    this.style.display = "none";
+
+    // kalau sudah redirect untuk video ini → stop
+    if (redirectDone.has(index)) return;
+
+    // reset timer sebelumnya
+    clearTimeout(activeTimer);
+
+    activeTimer = setTimeout(() => {
+
       video.pause();
-      hasTriggered = true;
+      redirectDone.add(index); // hanya video ini yg kena
+
     }, 5000);
-  } else {
-    hasRedirected = true;
-    window.location.href = link;
-  }
 
-  video.onpause = () => clearTimeout(timer);
-}
+    // kalau user klik play lagi setelah pause → redirect
+    video.addEventListener("play", function onceRedirect() {
 
+      if (redirectDone.has(index)) {
+        window.location.href = link;
+      }
+
+    }, { once: true });
+
+    video.onpause = () => {
+      clearTimeout(activeTimer);
+    };
+
+  });
+
+});
+
+// pause semua video saat scroll
 window.addEventListener("scroll", () => {
   document.querySelectorAll("video").forEach(v => v.pause());
 });
 </script>
 
 </body>
-  </html>
+</html>
