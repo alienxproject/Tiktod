@@ -1,7 +1,7 @@
 var videos = [
   {
     id: 1,
-    src: "cdn2.aceimg.com/28bc64a81.mp4",
+    src: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
     thumb: "https://i.pinimg.com/236x/ef/92/50/ef9250156267cd0dc392448caee151c3.jpg",
     title: "Jangan tonton ini sendirian...",
     views: "12K views",
