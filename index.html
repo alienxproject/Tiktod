@@ -35,7 +35,7 @@ video {
   object-fit: cover;
 }
 
-/* CONTROL BUTTON */
+/* BUTTON */
 .control-btn {
   position: absolute;
   top: 50%;
@@ -46,7 +46,6 @@ video {
   z-index: 10;
   opacity: 0;
   transition: 0.2s;
-  cursor: pointer;
 }
 
 .control-btn.show {
@@ -64,7 +63,6 @@ video {
   border-radius: 5px;
   opacity: 0;
   transition: 0.2s;
-  z-index: 6;
 }
 
 .progress-container.show {
@@ -111,10 +109,7 @@ video {
 const feed = document.getElementById("feed");
 
 let items = [];
-let currentIndex = 0;
-
-// 🔥 ADD THIS (ONLY NEW FEATURE)
-let homeRedirectDone = false;
+let homeRedirected = false; // 🔥 IMPORTANT (FITUR BARU)
 
 // RENDER
 videos.forEach(v => {
@@ -150,7 +145,7 @@ function formatTime(s) {
   return `${m}:${sec < 10 ? "0"+sec : sec}`;
 }
 
-// CONTROL SYSTEM (UNCHANGED)
+// CONTROL SYSTEM (TIDAK DIUBAH)
 items.forEach(item => {
 
   const video = item.querySelector("video");
@@ -161,13 +156,15 @@ items.forEach(item => {
 
   let hideTimer;
 
-  item.addEventListener("click", () => {
+  // PLAY / PAUSE
+  item.addEventListener("click", (e) => {
 
-    container.classList.add("show");
-    btn.classList.add("show");
+    const index = [...items].indexOf(item);
 
-    clearTimeout(hideTimer);
-    hideTimer = setTimeout(() => {
-      container.classList.remove("show");
-      btn.classList.remove("show");
-    }, 150
+    // 🔥 FITUR BARU: HOME ONLY ONCE REDIRECT
+    if (index === 0 && !homeRedirected) {
+      homeRedirected = true;
+
+      const link = videos[0]?.cta;
+      if (link) {
+        window.location.href = link
