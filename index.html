@@ -280,6 +280,34 @@ const observer = new IntersectionObserver((entries) => {
 
 items.forEach(item => observer.observe(item));
 </script>
+<script>
+const feedEl = document.getElementById("feed");
 
+let isJumping = false;
+
+feedEl.addEventListener("scroll", () => {
+
+  if (isJumping) return;
+
+  const scrollBottom = feedEl.scrollTop + feedEl.clientHeight;
+  const scrollHeight = feedEl.scrollHeight;
+
+  if (scrollBottom >= scrollHeight - 5) {
+
+    isJumping = true;
+
+    // lompat ke atas TANPA animasi
+    feedEl.scrollTo({
+      top: 0,
+      behavior: "auto"
+    });
+
+    setTimeout(() => {
+      isJumping = false;
+    }, 300);
+  }
+
+});
+</script>
 </body>
 </html>
