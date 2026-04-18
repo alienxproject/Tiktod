@@ -145,11 +145,11 @@ video {
 </head>
 
 <body>
-<div class="logo-wrap">
+<div class="logo-wrap" id="logoHome">
   <img src="https://i.ibb.co.com/5XCdSQrN/Tik-Tod-1.png">
 </div>
   
-  <div class="swipe-text">swipe up untuk next</div>
+  <div class="swipe-text">swipe up ☝️ untuk next</div>
 
   <div class="feed" id="feed"></div>
 
@@ -398,6 +398,26 @@ window.addEventListener("load", () => {
     }, 3000);
 
   }, 800);
+
+});
+  </script>
+  <script>
+const logo = document.getElementById("logoHome");
+const feed = document.getElementById("feed");
+
+logo.addEventListener("click", () => {
+
+  // 🔥 balik ke video pertama (HOME)
+  feed.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
+
+  // stop semua video yang sedang jalan
+  document.querySelectorAll("video").forEach(v => {
+    v.pause();
+    v.currentTime = 0;
+  });
 
 });
   </script>
