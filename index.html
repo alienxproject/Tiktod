@@ -20,9 +20,6 @@ body {
   height: 100vh;
   overflow-y: scroll;
   scroll-snap-type: y mandatory;
-
-  overscroll-behavior: none;
-  -webkit-overflow-scrolling: auto;
 }
 
 /* 🔥 FULL 1 LAYAR (IMPORTANT FIX) */
@@ -108,9 +105,7 @@ video {
 
 <body>
 
-<div class="feed">
-  <div id="feed"></div>
-</div>
+<div class="feed" id="feed"></div>
 
 <script src="data/videos.js"></script>
 
@@ -318,38 +313,6 @@ feedEl.addEventListener("touchend", (e) => {
     }
 
   }
-
-});
-</script>
-<script>
-const feedEl = document.getElementById("feed");
-
-let isSnapping = false;
-let snapTimeout;
-
-feedEl.addEventListener("scroll", () => {
-
-  if (isSnapping) return;
-
-  clearTimeout(snapTimeout);
-
-  snapTimeout = setTimeout(() => {
-
-    const vh = window.innerHeight;
-    const index = Math.round(feedEl.scrollTop / vh);
-
-    isSnapping = true;
-
-    feedEl.scrollTo({
-      top: index * vh,
-      behavior: "smooth"
-    });
-
-    setTimeout(() => {
-      isSnapping = false;
-    }, 300);
-
-  }, 80); // delay kecil untuk detect stop swipe
 
 });
 </script>
