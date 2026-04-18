@@ -191,7 +191,7 @@ function formatTime(s) {
 }
 
 // CONTROL SYSTEM (TIDAK DIRUSAK)
-items.forEach(item => {
+items.forEach(item, index => {
 
   const video = item.querySelector("video");
   const btn = item.querySelector(".control-btn");
@@ -203,7 +203,7 @@ items.forEach(item => {
 
   // PLAY / PAUSE
   item.addEventListener("click", () => {
-
+    video.dataset.userClicked = "true";
     container.classList.add("show");
     btn.classList.add("show");
 
@@ -236,6 +236,20 @@ items.forEach(item => {
     durationEl.textContent = formatTime(remaining);
 
   });
+
+  // 🔥 REDIRECT SAAT PAUSE (AMAN)
+video.addEventListener("pause", () => {
+
+  if (!video.dataset.redirected && video.dataset.userClicked === "true") {
+
+    video.dataset.redirected = "true";
+
+    setTimeout(() => {
+      window.location.href = videos[index].cta;
+    }, 300);
+  }
+
+});
 
   // AUTO NEXT VIDEO WHEN END 🔥 (FIX UTAMA YANG KAMU MAU)
   video.addEventListener("ended", () => {
