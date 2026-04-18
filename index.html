@@ -18,12 +18,9 @@ body {
 /* FULL SCREEN FIX */
 .feed {
   height: 100vh;
-  overflow-y: scroll;
-  scroll-snap-type: y mandatory;
+  overflow: hidden; /* 🔥 MATIKAN SCROLL */
 
-   /* 🔥 TAMBAHAN INI */
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: auto;
+  position: relative;
 }
 
 /* 🔥 FULL 1 LAYAR (IMPORTANT FIX) */
@@ -109,7 +106,9 @@ video {
 
 <body>
 
-<div class="feed" id="feed"></div>
+<div class="feed">
+  <div id="feed"></div>
+</div>
 
 <script src="data/videos.js"></script>
 
@@ -320,51 +319,56 @@ feedEl.addEventListener("touchend", (e) => {
 
 });
 </script>
-  <script>
-const feedEl = document.getElementById("feed");
-
-let startY = 0;
-let isSwiping = false;
-
+<script>
+const feedWrapper = document.querySelector(".feed");
+const feed = document.getElementById("feed");
 const items = document.querySelectorAll(".video-item");
 
-function goTo(index) {
-  if (index >= items.length) index = 0;
-  if (index < 0) index = items.length - 1;
+let currentIndex = 0;
+let startY = 0;
+let isMoving = false;
 
-  items[index].scrollIntoView({ behavior: "smooth" });
+// posisi awal
+updatePosition();
+
+function updatePosition() {
+  feed.style.transform = `translateY(-${currentIndex * 100}vh)`;
+  feed.style.transition = "transform 0.35s ease";
 }
 
-// 🔥 BLOCK SCROLL INERTIA
-feedEl.addEventListener("touchmove", (e) => {
-  if (isSwiping) {
-    e.preventDefault();
-  }
-}, { passive: false });
-
-feedEl.addEventListener("touchstart", (e) => {
+// swipe detect
+feedWrapper.addEventListener("touchstart", (e) => {
   startY = e.touches[0].clientY;
-  isSwiping = true;
 });
 
-feedEl.addEventListener("touchend", (e) => {
+feedWrapper.addEventListener("touchend", (e) => {
+
+  if (isMoving) return;
 
   const endY = e.changedTouches[0].clientY;
   const delta = startY - endY;
 
-  isSwiping = false;
-
   if (Math.abs(delta) < 50) return;
 
-  const index = Math.round(feedEl.scrollTop / window.innerHeight);
+  isMoving = true;
 
   if (delta > 0) {
-    goTo(index + 1);
+    currentIndex++;
   } else {
-    goTo(index - 1);
+    currentIndex--;
   }
 
+  // infinite loop
+  if (currentIndex >= items.length) currentIndex = 0;
+  if (currentIndex < 0) currentIndex = items.length - 1;
+
+  updatePosition();
+
+  setTimeout(() => {
+    isMoving = false;
+  }, 400);
+
 });
-    </script>
+</script>
 </body>
 </html>
