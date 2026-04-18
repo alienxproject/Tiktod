@@ -153,6 +153,11 @@ videos.forEach(v => {
 
 items = document.querySelectorAll(".video-item");
 
+// 🔥 TAMPILKAN PLAY BUTTON DI VIDEO PERTAMA SAAT LOAD
+const firstBtn = items[0].querySelector(".control-btn");
+firstBtn.classList.add("show");
+firstBtn.textContent = "▶";
+  
 // FORMAT TIME
 function formatTime(s) {
   const m = Math.floor(s / 60);
