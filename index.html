@@ -282,29 +282,35 @@ items.forEach(item => observer.observe(item));
 </script>
 <script>
 const feedEl = document.getElementById("feed");
+let startY = 0;
+let endY = 0;
 
-let isJumping = false;
+feedEl.addEventListener("touchstart", (e) => {
+  startY = e.touches[0].clientY;
+});
 
-feedEl.addEventListener("scroll", () => {
+feedEl.addEventListener("touchend", (e) => {
+  endY = e.changedTouches[0].clientY;
 
-  if (isJumping) return;
+  const delta = startY - endY;
 
-  const scrollBottom = feedEl.scrollTop + feedEl.clientHeight;
-  const scrollHeight = feedEl.scrollHeight;
+  // hanya deteksi swipe ke atas (next video)
+  if (delta > 50) {
 
-  if (scrollBottom >= scrollHeight - 5) {
+    const scrollBottom = feedEl.scrollTop + feedEl.clientHeight;
+    const scrollHeight = feedEl.scrollHeight;
 
-    isJumping = true;
+    // 🔥 cek apakah sedang di video terakhir
+    if (scrollBottom >= scrollHeight - 5) {
 
-    // lompat ke atas TANPA animasi
-    feedEl.scrollTo({
-      top: 0,
-      behavior: "auto"
-    });
+      // lompat ke video pertama TANPA animasi
+      feedEl.scrollTo({
+        top: 0,
+        behavior: "auto"
+      });
 
-    setTimeout(() => {
-      isJumping = false;
-    }, 300);
+    }
+
   }
 
 });
