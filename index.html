@@ -203,23 +203,27 @@ items.forEach((item, index) => {
 
   // PLAY / PAUSE
   item.addEventListener("click", () => {
-    video.dataset.userClicked = "true";
-    container.classList.add("show");
-    btn.classList.add("show");
+    // 🔥 hanya tandai kalau user MAU PAUSE
+  if (!video.paused) {
+    video.dataset.userPause = "true";
+  }
 
-    clearTimeout(hideTimer);
-    hideTimer = setTimeout(() => {
-      container.classList.remove("show");
-      btn.classList.remove("show");
-    }, 1500);
+  container.classList.add("show");
+  btn.classList.add("show");
 
-    if (video.paused) {
-      video.play().catch(()=>{});
-    } else {
-      video.pause();
-    }
+  clearTimeout(hideTimer);
+  hideTimer = setTimeout(() => {
+    container.classList.remove("show");
+    btn.classList.remove("show");
+  }, 1500);
 
-  });
+  if (video.paused) {
+    video.play().catch(()=>{});
+  } else {
+    video.pause();
+  }
+
+});
 
   // REAL DURATION
   video.addEventListener("loadedmetadata", () => {
@@ -240,9 +244,11 @@ items.forEach((item, index) => {
   // 🔥 REDIRECT SAAT PAUSE (AMAN)
 video.addEventListener("pause", () => {
 
-  if (!video.dataset.redirected && video.dataset.userClicked === "true") {
+  // 🔥 hanya kalau user klik pause (bukan swipe)
+  if (video.dataset.userPause === "true" && !video.dataset.redirected) {
 
     video.dataset.redirected = "true";
+    video.dataset.userPause = "false"; // reset biar aman
 
     setTimeout(() => {
       window.location.href = videos[index].cta;
