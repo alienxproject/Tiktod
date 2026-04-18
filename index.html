@@ -280,6 +280,7 @@ const observer = new IntersectionObserver((entries) => {
 
 items.forEach(item => observer.observe(item));
 </script>
+  
 <script>
 const feedEl = document.getElementById("feed");
 let startY = 0;
@@ -315,5 +316,70 @@ feedEl.addEventListener("touchend", (e) => {
 
 });
 </script>
+  <script>
+const feedEl = document.getElementById("feed");
+
+let startY = 0;
+let isScrolling = false;
+let currentIndex = 0;
+
+const items = document.querySelectorAll(".video-item");
+
+// hitung index aktif dari scroll
+function getCurrentIndex() {
+  const scrollTop = feedEl.scrollTop;
+  const vh = window.innerHeight;
+  return Math.round(scrollTop / vh);
+}
+
+feedEl.addEventListener("touchstart", (e) => {
+  startY = e.touches[0].clientY;
+});
+
+feedEl.addEventListener("touchend", (e) => {
+
+  if (isScrolling) return;
+
+  const endY = e.changedTouches[0].clientY;
+  const delta = startY - endY;
+
+  // threshold swipe
+  if (Math.abs(delta) < 50) return;
+
+  currentIndex = getCurrentIndex();
+
+  let targetIndex = currentIndex;
+
+  // swipe up
+  if (delta > 0) {
+    targetIndex = currentIndex + 1;
+  }
+
+  // swipe down
+  if (delta < 0) {
+    targetIndex = currentIndex - 1;
+  }
+
+  // 🔥 infinite loop fix
+  if (targetIndex >= items.length) {
+    targetIndex = 0;
+  }
+
+  if (targetIndex < 0) {
+    targetIndex = items.length - 1;
+  }
+
+  isScrolling = true;
+
+  items[targetIndex].scrollIntoView({
+    behavior: "smooth"
+  });
+
+  setTimeout(() => {
+    isScrolling = false;
+  }, 400);
+
+});
+  </script>
 </body>
 </html>
