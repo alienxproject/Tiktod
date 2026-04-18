@@ -352,5 +352,28 @@ feedEl.addEventListener("touchend", (e) => {
 
 });
 </script>
+  <script>
+// 🔥 swipe hint (sekali saja)
+window.addEventListener("load", () => {
+
+  const feed = document.getElementById("feed");
+
+  setTimeout(() => {
+    feed.scrollTo({
+      top: 60,
+      behavior: "smooth"
+    });
+
+    setTimeout(() => {
+      feed.scrollTo({
+        top: 0,
+        behavior: "smooth"
+      });
+    }, 400);
+
+  }, 800);
+
+});
+  </script>
 </body>
 </html>
