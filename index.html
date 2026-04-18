@@ -29,6 +29,33 @@ body {
   height: auto;
   display: block;
 }
+
+.swipe-text {
+  position: fixed;
+  top: 22%; /* 🔥 atas tapi agak turun */
+  left: 50%;
+  transform: translateX(-50%);
+  
+  color: white;
+  font-size: 14px;
+  opacity: 0;
+  z-index: 9999;
+  
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: rgba(0,0,0,0.25);
+  backdrop-filter: blur(6px);
+
+  animation: swipeBounce 1.2s infinite;
+  pointer-events: none;
+  transition: 0.4s;
+  text-align: center;
+}
+
+@keyframes swipeBounce {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(-8px); }
+}
   
 .feed {
   height: 100vh;
@@ -121,7 +148,10 @@ video {
 <div class="logo-wrap">
   <img src="https://i.ibb.co.com/5XCdSQrN/Tik-Tod-1.png">
 </div>
-<div class="feed" id="feed"></div>
+  
+  <div class="swipe-text">swipe up untuk next</div>
+
+  <div class="feed" id="feed"></div>
 
 <script src="data/videos.js"></script>
 
@@ -353,23 +383,19 @@ feedEl.addEventListener("touchend", (e) => {
 });
 </script>
   <script>
-// 🔥 swipe hint (sekali saja)
 window.addEventListener("load", () => {
 
-  const feed = document.getElementById("feed");
+  const text = document.querySelector(".swipe-text");
 
+  // hanya muncul di HOME awal
   setTimeout(() => {
-    feed.scrollTo({
-      top: 60,
-      behavior: "smooth"
-    });
 
+    text.style.opacity = "1";
+
+    // hilang setelah 3 detik
     setTimeout(() => {
-      feed.scrollTo({
-        top: 0,
-        behavior: "smooth"
-      });
-    }, 400);
+      text.style.opacity = "0";
+    }, 3000);
 
   }, 800);
 
