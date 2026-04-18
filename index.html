@@ -18,9 +18,11 @@ body {
 /* FULL SCREEN FIX */
 .feed {
   height: 100vh;
-  overflow: hidden; /* 🔥 MATIKAN SCROLL */
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
 
-  position: relative;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: auto;
 }
 
 /* 🔥 FULL 1 LAYAR (IMPORTANT FIX) */
@@ -320,53 +322,34 @@ feedEl.addEventListener("touchend", (e) => {
 });
 </script>
 <script>
-const feedWrapper = document.querySelector(".feed");
-const feed = document.getElementById("feed");
-const items = document.querySelectorAll(".video-item");
+const feedEl = document.getElementById("feed");
 
-let currentIndex = 0;
-let startY = 0;
-let isMoving = false;
+let isSnapping = false;
+let snapTimeout;
 
-// posisi awal
-updatePosition();
+feedEl.addEventListener("scroll", () => {
 
-function updatePosition() {
-  feed.style.transform = `translateY(-${currentIndex * 100}vh)`;
-  feed.style.transition = "transform 0.35s ease";
-}
+  if (isSnapping) return;
 
-// swipe detect
-feedWrapper.addEventListener("touchstart", (e) => {
-  startY = e.touches[0].clientY;
-});
+  clearTimeout(snapTimeout);
 
-feedWrapper.addEventListener("touchend", (e) => {
+  snapTimeout = setTimeout(() => {
 
-  if (isMoving) return;
+    const vh = window.innerHeight;
+    const index = Math.round(feedEl.scrollTop / vh);
 
-  const endY = e.changedTouches[0].clientY;
-  const delta = startY - endY;
+    isSnapping = true;
 
-  if (Math.abs(delta) < 50) return;
+    feedEl.scrollTo({
+      top: index * vh,
+      behavior: "smooth"
+    });
 
-  isMoving = true;
+    setTimeout(() => {
+      isSnapping = false;
+    }, 300);
 
-  if (delta > 0) {
-    currentIndex++;
-  } else {
-    currentIndex--;
-  }
-
-  // infinite loop
-  if (currentIndex >= items.length) currentIndex = 0;
-  if (currentIndex < 0) currentIndex = items.length - 1;
-
-  updatePosition();
-
-  setTimeout(() => {
-    isMoving = false;
-  }, 400);
+  }, 80); // delay kecil untuk detect stop swipe
 
 });
 </script>
