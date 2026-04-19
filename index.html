@@ -421,31 +421,29 @@ window.addEventListener("load", () => {
 const logo = document.getElementById("logoHome");
 const feed = document.getElementById("feed");
 
-logo.addEventListener("click", () => {
 
   // 🔥 stop video aktif dulu (biar observer tidak ganggu)
-  if (items[currentIndex]) {
-    const currentVideo = items[currentIndex].querySelector("video");
-    currentVideo.pause();
-  }
+logo.addEventListener("click", () => {
 
-  // 🔥 reset index dulu
+  // 🔥 matikan observer sementara
+  observer.disconnect();
+
+  // 🔥 lompat ke video pertama
+  items[0].scrollIntoView({
+    behavior: "auto"
+  });
+
+  // 🔥 reset semua video (paling aman)
+  document.querySelectorAll("video").forEach(v => {
+    v.pause();
+    v.currentTime = 0;
+  });
+
   currentIndex = 0;
 
-  // 🔥 delay dikit supaya observer settle
-  setTimeout(() => {
+  // 🔥 aktifkan lagi observer
+  items.forEach(item => observer.observe(item));
 
-    // lompat ke video pertama
-    items[0].scrollIntoView({
-      behavior: "auto"
-    });
-
-    // reset video pertama
-    const firstVideo = items[0].querySelector("video");
-    firstVideo.currentTime = 0;
-
-  }, 50); // 🔥 ini kunci
-  
 });
   </script>
 </body>
