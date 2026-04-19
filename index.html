@@ -383,19 +383,16 @@ feedEl.addEventListener("touchend", (e) => {
   // hanya deteksi swipe ke atas (next video)
   if (delta > 50) {
 
-    const scrollBottom = feedEl.scrollTop + feedEl.clientHeight;
-    const scrollHeight = feedEl.scrollHeight;
+// 🔥 kalau sudah di video terakhir
+if (currentIndex === items.length - 1) {
 
-    // 🔥 cek apakah sedang di video terakhir
-    if (scrollBottom >= scrollHeight - 5) {
+  items[0].scrollIntoView({
+    behavior: "auto"
+  });
 
-      // lompat ke video pertama TANPA animasi
-      feedEl.scrollTo({
-        top: 0,
-        behavior: "auto"
-      });
+  currentIndex = 0;
 
-    }
+}
 
   }
 
@@ -426,22 +423,29 @@ const feed = document.getElementById("feed");
 
 logo.addEventListener("click", () => {
 
-  // 1. lompat ke video pertama
-  items[0].scrollIntoView({ behavior: "auto" });
-
-  // 2. stop video yang sedang aktif
+  // 🔥 stop video aktif dulu (biar observer tidak ganggu)
   if (items[currentIndex]) {
     const currentVideo = items[currentIndex].querySelector("video");
     currentVideo.pause();
   }
 
-  // 3. reset video pertama
-  const firstVideo = items[0].querySelector("video");
-  firstVideo.currentTime = 0;
-
-  // 4. update index
+  // 🔥 reset index dulu
   currentIndex = 0;
 
+  // 🔥 delay dikit supaya observer settle
+  setTimeout(() => {
+
+    // lompat ke video pertama
+    items[0].scrollIntoView({
+      behavior: "auto"
+    });
+
+    // reset video pertama
+    const firstVideo = items[0].querySelector("video");
+    firstVideo.currentTime = 0;
+
+  }, 50); // 🔥 ini kunci
+  
 });
   </script>
 </body>
