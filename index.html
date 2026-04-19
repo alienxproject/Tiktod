@@ -172,13 +172,17 @@ let items = [];
 let currentIndex = 0;
 
 // RENDER
-videos.forEach(v => {
+videos.forEach((v, i) => {
 
   feed.innerHTML += `
     <div class="video-item">
 
-      <video data-src="${v.src}" playsinline preload="none" muted></video>
-
+      ${
+  i === 0
+  ? `<video src="${v.src}" ${v.thumb ? `poster="${v.thumb}"` : ""} playsinline preload="metadata" muted></video>`
+  : `<video data-src="${v.src}" ${v.thumb ? `poster="${v.thumb}"` : ""} playsinline preload="none" muted></video>`
+      }
+      
       <div class="control-btn">▶</div>
 
       <div class="progress-container">
