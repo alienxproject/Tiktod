@@ -29,12 +29,6 @@ body {
   height: auto;
   display: block;
 }
-.logo-wrap img {
-  pointer-events: auto;
-  cursor: pointer;
-  position: relative;
-  z-index: 10000;
-}
   
 .swipe-text {
   position: fixed;
@@ -141,8 +135,8 @@ video {
 </head>
 
 <body>
-<div class="logo-wrap">
-  <img id="logoHome" src="https://i.ibb.co.com/5XCdSQrN/Tik-Tod-1.png">
+<div class="logo-wrap" id="logoHome">
+  <img src="https://i.ibb.co.com/5XCdSQrN/Tik-Tod-1.png">
 </div>
   
   <div class="swipe-text">swipe up ☝️ untuk next</div>
@@ -433,19 +427,16 @@ const feed = document.getElementById("feed");
 logo.addEventListener("click", () => {
 
   // 🔥 balik ke video pertama (HOME)
-  feed.scrollTo({
-    top: 0,
-    behavior: "smooth"
-  });
+  items[0].scrollIntoView({
+  behavior: "auto"
+});
 
-  // 🔥 reset hanya video aktif
-  const currentVideo = items[currentIndex].querySelector("video");
+document.querySelectorAll("video").forEach(v => {
+  v.pause();
+  v.currentTime = 0;
+});
 
-  currentVideo.pause();
-  currentVideo.currentTime = 0;
-
-  // 🔥 set ulang index ke home
-  currentIndex = 0;
+currentIndex = 0;
 
 });
 });
