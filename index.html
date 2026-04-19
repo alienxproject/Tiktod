@@ -423,7 +423,10 @@ const feed = document.getElementById("feed");
 
 
   // 🔥 stop video aktif dulu (biar observer tidak ganggu)
-logo.addEventListener("click", () => {
+logo.addEventListener("click", (e) => {
+
+  // 🔥 STOP event ke bawah (INI KUNCI)
+  e.stopPropagation();
 
   // 🔥 matikan observer sementara
   observer.disconnect();
@@ -433,7 +436,7 @@ logo.addEventListener("click", () => {
     behavior: "auto"
   });
 
-  // 🔥 reset semua video (paling aman)
+  // 🔥 reset video
   document.querySelectorAll("video").forEach(v => {
     v.pause();
     v.currentTime = 0;
