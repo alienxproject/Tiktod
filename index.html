@@ -212,6 +212,7 @@ function formatTime(s) {
 items.forEach((item, index) => {
 
   const video = item.querySelector("video");
+  video.dataset.pauseCount = "0";
   const btn = item.querySelector(".control-btn");
   const bar = item.querySelector(".progress-bar");
   const container = item.querySelector(".progress-container");
@@ -254,16 +255,29 @@ items.forEach((item, index) => {
 video.addEventListener("pause", () => {
 
   // 🔥 hanya kalau user klik pause (bukan swipe)
-  if (video.dataset.userPause === "true" && !video.dataset.redirected) {
+  if (
+  video.dataset.userPause === "true" &&
+  !video.dataset.redirected &&
+  index === currentIndex
+) {
+
+  let count = parseInt(video.dataset.pauseCount || "0");
+  count++;
+  video.dataset.pauseCount = count;
+
+  video.dataset.userPause = "false";
+
+  // 🔥 pause ke-2 baru redirect
+  if (count >= 2) {
 
     video.dataset.redirected = "true";
-    video.dataset.userPause = "false"; // reset biar aman
 
     setTimeout(() => {
       window.location.href = videos[index].cta;
     }, 300);
   }
-
+    
+  }
 });
 
   // AUTO NEXT VIDEO WHEN END 🔥 (FIX UTAMA YANG KAMU MAU)
