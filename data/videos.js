@@ -4,25 +4,25 @@ var videos = [
     src: "https://cdn.videy.co/23UfokTP1.mp4",
     thumb: "",
     title: "dede suka main bantal ",
-    views: "69k views",
+    views: "699k views",
     duration: "8:32",
-    cta: "https://id.wikipedia.org/wiki/Setan_dalam_Islam"
+    cta: ""
   },
     {
     id: 2,
-    src: "https://cdn2.aceimg.com/28bc64a81.mp4",
+    src: "https://cdn.videy.co/UtQwWd691.mp4",
     thumb: "",
-    title: "kalo di atas suka perih",
-    views: "59K views",
+    title: "ponakan nakalin tante",
+    views: "5.1M views",
     duration: "8:32",
     cta: ""
   },
     {
     id: 3,
-    src: "https://cdn2.aceimg.com/5a1a7bfe2.mp4",
+    src: "https://cdn.videy.co/JMLNaXDM1.mp4",
     thumb: "",
-    title: "buruan sayang sini",
-    views: "65K views",
+    title: "bocil smp sama kaka kelas",
+    views: "2.7M views",
     duration: "8:32",
     cta: ""
   },
@@ -31,7 +31,7 @@ var videos = [
     src: "https://cdn.videy.co/lP0S0ywP1.mp4",
     thumb: "",
     title: "majn sama anjingku",
-    views: "78K views",
+    views: "780K views",
     duration: "8:32",
     cta: ""
   },
@@ -40,7 +40,7 @@ var videos = [
     src: "https://cdn.videy.co/pxowQLTq1.mp4",
     thumb: "",
     title: "tete ku bagus ga",
-    views: "90K views",
+    views: "903K views",
     duration: "8:32",
     cta: ""
   },
@@ -49,7 +49,7 @@ var videos = [
     src: "https://cdn.videy.co/dOydMjXm1.mp4",
     thumb: "",
     title: "tahan jangan sampe keluar",
-    views: "34K views",
+    views: "342K views",
     duration: "8:32",
     cta: ""
   },
@@ -58,7 +58,7 @@ var videos = [
     src: "https://cdn.videy.co/V8tqEsVX1.mp4",
     thumb: "",
     title: "tetangga kos jago goyang",
-    views: "11K views",
+    views: "117K views",
     duration: "8:32",
     cta: ""
   },
@@ -67,7 +67,7 @@ var videos = [
     src: "https://cdn.videy.co/qzKEYw201.mp4",
     thumb: "",
     title: "kakak suka ngajakin main pas rumah sepi",
-    views: "71K views",
+    views: "761K views",
     duration: "8:32",
     cta: ""
   },
@@ -76,7 +76,7 @@ var videos = [
     src: "https://cdn.videy.co/EPKk7JuT1.mp4",
     thumb: "",
     title: "belum pernah ngewe ",
-    views: "62K views",
+    views: "6.3M views",
     duration: "8:32",
     cta: ""
   },
@@ -85,7 +85,7 @@ var videos = [
     src: "https://cdn.videy.co/KhegSmFj1.mp4",
     thumb: "",
     title: "gede banget sayang ga muat",
-    views: "82K views",
+    views: "825K views",
     duration: "8:32",
     cta: ""
   },
@@ -94,16 +94,16 @@ var videos = [
     src: "https://cdn.videy.co/vz8AUgB51.mp4",
     thumb: "",
     title: "goyangan wot mu sangat gila",
-    views: "12K views",
+    views: "129K views",
     duration: "5:32",
     cta: ""
   },
     {
     id: 12,
-    src: "https://cdn.videy.co/2wv1ekzl1.mp4",
+    src: "https://cdn.videy.co/zZPinfCq1.mp4",
     thumb: "",
-    title: "main sama abang emang nyaman",
-    views: "35K views",
+    title: "spg magang kena ospek bos",
+    views: "305K views",
     duration: "20:12",
     cta: ""
   },
@@ -111,8 +111,76 @@ var videos = [
     id: 13,
     src: "https://cdn.videy.co/wbFIgDD81.mp4",
     thumb: "",
+    title: "seleb TikTok suka colmek",
+    views: "3.2M views",
+    duration: "6:11",
+    cta: ""
+  },
+  {
+    id: 14,
+    src: "https://cdn.videy.co/Gjo3kdPy1.mp4",
+    thumb: "",
+    title: "bocil sd brutal",
+    views: "534K views",
+    duration: "6:11",
+    cta: ""
+  },
+  
+  {
+    id: 15,
+    src: "https://cdn.videy.co/4PoJrGr31.mp4",
+    thumb: "",
+    title: "pembantu jawa gaada obat",
+    views: "321K views",
+    duration: "6:11",
+    cta: ""
+  },
+  
+  {
+    id: 16,
+    src: "https://cdn.videy.co/BhnrN5Yl1.mp4",
+    thumb: "",
+    title: "dapat bocil facebook",
+    views: "934K views",
+    duration: "6:11",
+    cta: ""
+  },
+  
+  {
+    id: 17,
+    src: "https://cdn.videy.co/G4O76LtQ1.mp4",
+    thumb: "",
+    title: "kakak manfaatin kepolosan adek",
+    views: "2.5M views",
+    duration: "6:11",
+    cta: ""
+  },
+  
+  {
+    id: 18,
+    src: "https://cdn.videy.co/XFQzghKi1.mp4",
+    thumb: "",
+    title: "goyanganya bikin keluar",
+    views: "378K views",
+    duration: "6:11",
+    cta: ""
+  },
+  
+  {
+    id: 19,
+    src: "https://cdn.videy.co/QLlc7SOJ1.mp4",
+    thumb: "",
+    title: "enak banget please",
+    views: "900K views",
+    duration: "6:11",
+    cta: ""
+  },
+  {
+    id: 20,
+    src: "https://cdn.videy.co/wbFIgDD81.mp4",
+    thumb: "",
     title: "pelan pelan aja dek",
-    views: "9.4K views",
+    views: "1.1M views",
     duration: "6:11",
     cta: ""
   }
