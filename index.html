@@ -177,7 +177,7 @@ videos.forEach(v => {
   feed.innerHTML += `
     <div class="video-item">
 
-      <video src="${v.src}" poster="${v.thumb}" playsinline></video>
+      <video data-src="${v.src}" playsinline preload="none" muted></video>
 
       <div class="control-btn">▶</div>
 
@@ -321,9 +321,31 @@ const observer = new IntersectionObserver((entries) => {
       }
 
       // NEXT auto play
-      if (index > 0) {
-        video.play().catch(()=>{});
-      }
+      // 🔥 LOAD VIDEO SAAT MASUK VIEW
+if (!video.src) {
+  video.src = video.dataset.src;
+}
+
+// HOME tetap manual
+if (index === 0) {
+  video.pause();
+}
+
+// NEXT auto play
+if (index > 0) {
+  video.play().catch(()=>{});
+}
+
+// 🔥 PRELOAD VIDEO BERIKUTNYA
+const next = items[index + 1];
+
+if (next) {
+  const nextVideo = next.querySelector("video");
+
+  if (!nextVideo.src) {
+    nextVideo.src = nextVideo.dataset.src;
+  }
+}
 
       currentIndex = index;
 
