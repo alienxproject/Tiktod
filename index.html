@@ -426,19 +426,22 @@ const feed = document.getElementById("feed");
 
 logo.addEventListener("click", () => {
 
-  // 🔥 balik ke video pertama (HOME)
-  items[0].scrollIntoView({
-  behavior: "auto"
-});
+  // 1. lompat ke video pertama
+  items[0].scrollIntoView({ behavior: "auto" });
 
-document.querySelectorAll("video").forEach(v => {
-  v.pause();
-  v.currentTime = 0;
-});
+  // 2. stop video yang sedang aktif
+  if (items[currentIndex]) {
+    const currentVideo = items[currentIndex].querySelector("video");
+    currentVideo.pause();
+  }
 
-currentIndex = 0;
+  // 3. reset video pertama
+  const firstVideo = items[0].querySelector("video");
+  firstVideo.currentTime = 0;
 
-});
+  // 4. update index
+  currentIndex = 0;
+
 });
   </script>
 </body>
