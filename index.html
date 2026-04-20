@@ -60,8 +60,10 @@ body {
 .feed {
   height: 100vh;
   overflow-y: scroll;
+  scroll-snap-type: y mandatory;
   overscroll-behavior: contain;
   touch-action: pan-y;
+  scroll-behavior: auto;
 }
 
 /* 🔥 FULL 1 LAYAR (IMPORTANT FIX) */
@@ -70,6 +72,7 @@ body {
   width: 100vw;
   position: relative;
   scroll-snap-align: start;
+  scroll-snap-stop: always;
   overflow: hidden;
 }
 
@@ -391,7 +394,8 @@ feedEl.addEventListener("touchend", (e) => {
   if (currentIndex < 0) currentIndex = items.length - 1;
 
   // 🔥 HARD SNAP (ANTI SKIP)
-  items[currentIndex].scrollIntoView({
+  feedEl.scrollTo({
+  top: items[currentIndex].offsetTop,
   behavior: "auto"
 });
 
