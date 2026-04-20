@@ -175,6 +175,7 @@ const feed = document.getElementById("feed");
 let items = [];
 let currentIndex = 0;
 let isScrolling = false;
+let hasInteracted = false;
 
 // RENDER
 videos.forEach((v, i) => {
@@ -402,9 +403,29 @@ feedEl.addEventListener("touchend", (e) => {
   behavior: "auto"
 });
 
-  setTimeout(() => {
-    isScrolling = false;
-  }, 200);
+// 🔥 anggap swipe = interaksi
+hasInteracted = true;
+
+// 🔥 ambil video aktif
+const currentVideo = items[currentIndex].querySelector("video");
+
+// 🔥 load kalau belum
+if (!currentVideo.src) {
+  currentVideo.src = currentVideo.dataset.src;
+}
+
+// 🔥 paksa play
+currentVideo.play().catch(()=>{});
+
+// 🔥 aktifkan audio setelah swipe
+if (hasInteracted) {
+  document.querySelectorAll("video").forEach(v => v.muted = true);
+  currentVideo.muted = false;
+}
+
+setTimeout(() => {
+  isScrolling = false;
+}, 200);
 
 });
 </script>
