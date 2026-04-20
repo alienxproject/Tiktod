@@ -59,6 +59,7 @@ body {
   
 .feed {
   height: 100vh;
+  overflow-y: scroll;
   overscroll-behavior: contain;
   touch-action: pan-y;
 }
@@ -390,12 +391,8 @@ feedEl.addEventListener("touchend", (e) => {
   if (currentIndex < 0) currentIndex = items.length - 1;
 
   // 🔥 HARD SNAP (ANTI SKIP)
-  feedEl.scrollTop = items[currentIndex].offsetTop;
-
-  setTimeout(() => {
-    isScrolling = false;
-  }, 200);
-
+  items[currentIndex].scrollIntoView({
+  behavior: "auto"
 });
 
   setTimeout(() => {
@@ -425,7 +422,6 @@ window.addEventListener("load", () => {
   </script>
   <script>
 const logo = document.getElementById("logoHome");
-const feed = document.getElementById("feed");
 
 
   // 🔥 stop video aktif dulu (biar observer tidak ganggu)
@@ -437,16 +433,24 @@ logo.addEventListener("click", (e) => {
 
   isScrolling = true;
 
+  // 🔥 reset index
   currentIndex = 0;
 
+  // 🔥 scroll ke video pertama
   items[0].scrollIntoView({
     behavior: "auto"
   });
 
+  // 🔥 stop semua video
   document.querySelectorAll("video").forEach(v => {
     v.pause();
     v.currentTime = 0;
   });
+
+  // 🔥 tampilkan tombol play di home lagi
+  const firstBtn = items[0].querySelector(".control-btn");
+  firstBtn.classList.add("show");
+  firstBtn.textContent = "▶";
 
   setTimeout(() => {
     isScrolling = false;
