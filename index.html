@@ -5,486 +5,293 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TikTod</title>
 
-<link rel="icon" href="https://static.vecteezy.com/system/resources/thumbnails/045/832/436/small_2x/3d-pink-alphabet-letter-t-png.png">
-
 <style>
-body {
-  margin: 0;
-  background: black;
-  font-family: sans-serif;
-  overflow: hidden;
-}
+body { margin:0; background:black; overflow:hidden; font-family:sans-serif; }
 
-/* FULL SCREEN FIX */
-.logo-wrap {
-  position: fixed;
-  top: 12px;
-  left: 12px;
-  z-index: 9999; /* 🔥 lebih tinggi dari semua */
-  pointer-events: auto;
-}
-
-.logo-wrap img {
-  width: 100px;
-  height: auto;
-  display: block;
-}
-  
-.swipe-text {
-  position: fixed;
-  top: 22%; /* 🔥 atas tapi agak turun */
-  left: 50%;
-  transform: translateX(-50%);
-  
-  color: white;
-  font-size: 14px;
-  opacity: 0;
-  z-index: 9999;
-  
-  padding: 6px 12px;
-  border-radius: 10px;
-  background: rgba(0,0,0,0.25);
-  backdrop-filter: blur(6px);
-
-  animation: swipeBounce 1.2s infinite;
-  pointer-events: none;
-  transition: 0.4s;
-  text-align: center;
-}
-
-@keyframes swipeBounce {
-  0%, 100% { transform: translateX(-50%) translateY(0); }
-  50% { transform: translateX(-50%) translateY(-8px); }
-}
-  
 .feed {
-  height: 100vh;
-  overflow-y: scroll;
-  scroll-snap-type: y mandatory;
-  overscroll-behavior: contain;
-  touch-action: pan-y;
-  scroll-behavior: auto;
+  height:100vh;
+  overflow-y:scroll;
+  scroll-snap-type:y mandatory;
 }
 
-/* 🔥 FULL 1 LAYAR (IMPORTANT FIX) */
 .video-item {
-  height: 100vh;
-  width: 100vw;
-  position: relative;
-  scroll-snap-align: start;
-  scroll-snap-stop: always;
-  overflow: hidden;
+  height:100vh;
+  scroll-snap-align:start;
+  position:relative;
 }
 
 video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover; /* FULL COVER FIX */
+  width:100%;
+  height:100%;
+  object-fit:cover;
 }
 
-/* CONTROL BUTTON */
 .control-btn {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 55px;
-  color: white;
-  z-index: 10;
-  opacity: 0;
-  transition: 0.2s;
-  cursor: pointer;
+  position:absolute;
+  top:50%; left:50%;
+  transform:translate(-50%,-50%);
+  font-size:50px;
+  color:white;
+  opacity:0;
+  transition:.2s;
 }
+.control-btn.show { opacity:1; }
 
-.control-btn.show {
-  opacity: 0.9;
-}
-
-/* PROGRESS */
 .progress-container {
-  position: absolute;
-  bottom: 25px;
-  left: 10px;
-  right: 10px;
-  height: 4px;
-  background: rgba(255,255,255,0.2);
-  border-radius: 5px;
-  opacity: 1;
-  transition: 0.2s;
-  z-index: 6;
+  position:absolute;
+  bottom:25px; left:10px; right:10px;
+  height:4px;
+  background:rgba(255,255,255,.2);
 }
-
-.progress-container.show {
-  opacity: 1;
-}
-
 .progress-bar {
-  height: 100%;
-  width: 0%;
-  background: white;
+  height:100%;
+  width:0%;
+  background:white;
 }
 
-/* DURATION */
-
-/* INFO */
 .info {
-  position: absolute;
-  bottom: 60px;
-  left: 10px;
-  right: 10px;
-  color: white;
-  z-index: 5;
+  position:absolute;
+  bottom:60px;
+  left:10px;
+  color:white;
 }
 </style>
 </head>
 
 <body>
-<div class="logo-wrap" id="logoHome">
-  <img src="https://i.ibb.co.com/5XCdSQrN/Tik-Tod-1.png">
-</div>
-  
-  <div class="swipe-text">swipe up ☝️ untuk next</div>
-
-  <div class="feed" id="feed"></div>
+<div class="feed" id="feed"></div>
 
 <script src="data/videos.js"></script>
 
 <script>
-/* 🔥 SHUFFLE SEKALI SAJA SAAT LOAD */
-(function () {
-  if (!window.__videosShuffled) {
-
-    function shuffle(array) {
-      for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
-      }
-    }
-
-    shuffle(videos);
-
-    // 🔒 LOCK supaya tidak ke-random lagi
-    window.__videosShuffled = true;
+// ======================
+// 🔥 RANDOM + ROTATE
+// ======================
+function shuffle(a){
+  for(let i=a.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
   }
-})();
-</script>
-  
-<script>
-const feed = document.getElementById("feed");
+}
+shuffle(videos);
 
+const startIndex = Math.floor(Math.random()*videos.length);
+videos = videos.slice(startIndex).concat(videos.slice(0,startIndex));
+
+// ======================
+// STATE
+// ======================
+const feed = document.getElementById("feed");
 let items = [];
 let currentIndex = 0;
-let isScrolling = false;
 let hasInteracted = false;
+let isProgrammaticScroll = false;
 
+// 🔥 ANTI REPEAT MEMORY
+let history = [];
+const HISTORY_LIMIT = 6;
+
+// ======================
+// NORMALIZE
+// ======================
+function normalizeIndex(i){
+  if(i<0) return items.length-1;
+  if(i>=items.length) return 0;
+  return i;
+}
+
+// ======================
+// 🔥 ANTI REPEAT PICKER
+// ======================
+function getNextIndex(dir=1){
+  let tries = 0;
+  let next;
+
+  do {
+    next = normalizeIndex(currentIndex + dir);
+    if (!history.includes(next)) break;
+
+    // kalau bentrok, lompat random
+    next = Math.floor(Math.random()*items.length);
+
+    tries++;
+  } while(tries < 10);
+
+  return next;
+}
+
+// ======================
 // RENDER
-videos.forEach((v, i) => {
-
+// ======================
+videos.forEach((v,i)=>{
   feed.innerHTML += `
     <div class="video-item">
+      <video ${i===0?`src="${v.src}" preload="metadata"`:`data-src="${v.src}" preload="none"`} playsinline muted></video>
 
-      ${
-  i === 0
-  ? `<video src="${v.src}" ${v.thumb ? `poster="${v.thumb}"` : ""} playsinline preload="metadata" muted></video>`
-  : `<video data-src="${v.src}" ${v.thumb ? `poster="${v.thumb}"` : ""} playsinline preload="none" muted></video>`
-      }
-      
       <div class="control-btn">▶</div>
 
       <div class="progress-container">
         <div class="progress-bar"></div>
       </div>
-      
+
       <div class="info">
         <h3>${v.title}</h3>
         <span>${v.views}</span>
       </div>
-
     </div>
   `;
 });
 
 items = document.querySelectorAll(".video-item");
 
-// 🔥 TAMPILKAN PLAY BUTTON DI VIDEO PERTAMA SAAT LOAD
-const firstBtn = items[0].querySelector(".control-btn");
-firstBtn.classList.add("show");
-firstBtn.textContent = "▶";
-  
-// FORMAT TIME
-function formatTime(s) {
-  const m = Math.floor(s / 60);
-  const sec = Math.floor(s % 60);
-  return `${m}:${sec < 10 ? "0"+sec : sec}`;
-}
+// ======================
+// CORE
+// ======================
+function activate(index){
+  index = normalizeIndex(index);
+  currentIndex = index;
 
-// CONTROL SYSTEM (TIDAK DIRUSAK)
-items.forEach((item, index) => {
+  // 🔥 update history
+  history.push(index);
+  if(history.length > HISTORY_LIMIT) history.shift();
 
-  const video = item.querySelector("video");
-  video.dataset.pauseCount = "0";
-  const btn = item.querySelector(".control-btn");
-  const bar = item.querySelector(".progress-bar");
-  const container = item.querySelector(".progress-container");
+  const video = items[index].querySelector("video");
 
-  let hideTimer;
-
-  // PLAY / PAUSE
-  item.addEventListener("click", () => {
-    // 🔥 hanya PAUSE
-    if (video.muted) {
-  video.muted = false;
-    }
-  if (!video.paused) {
-    video.dataset.userPause = "true";
-  }
-
-  container.classList.add("show");
-  btn.classList.add("show");
-
-  clearTimeout(hideTimer);
-  hideTimer = setTimeout(() => {
-    btn.classList.remove("show");
-  }, 1500);
-
-  if (video.paused) {
-    video.play().catch(()=>{});
-  } else {
-    video.pause();
-  }
-
-});
-
-
-  // COUNTDOWN + PROGRESS
-  video.addEventListener("timeupdate", () => {
-
-    const percent = (video.currentTime / video.duration) * 100;
-    bar.style.width = percent + "%";
-
+  document.querySelectorAll("video").forEach(v=>{
+    if(v!==video) v.pause();
   });
 
-  // 🔥 REDIRECT SAAT PAUSE (AMAN)
-video.addEventListener("pause", () => {
+  if(!video.src) video.src = video.dataset.src;
+  video.preload="auto";
 
-  // 🔥 hanya kalau user klik pause (bukan swipe)
-  if (
-  video.dataset.userPause === "true" &&
-  !video.dataset.redirected &&
-  index === currentIndex
-) {
+  video.dataset.userPause="false";
 
-  let count = parseInt(video.dataset.pauseCount || "0");
-  count++;
-  video.dataset.pauseCount = count;
-
-  video.dataset.userPause = "false";
-
-  // 🔥 pause ke-2 baru redirect
-  if (count >= 2) {
-
-    video.dataset.redirected = "true";
-
-    setTimeout(() => {
-      window.location.href = videos[index].cta;
-    }, 300);
-  }
-    
-  }
-});
-
-  // AUTO NEXT VIDEO WHEN END 🔥 (FIX UTAMA YANG KAMU MAU)
-  video.addEventListener("ended", () => {
-
-  if (isScrolling) return;
-
-  currentIndex++;
-  if (currentIndex >= items.length) currentIndex = 0;
-
-  isScrolling = true;
-
-  items[currentIndex].scrollIntoView({ behavior: "auto" });
-
-  const nextVideo = items[currentIndex].querySelector("video");
-
-  setTimeout(() => {
-    nextVideo.play().catch(()=>{});
-    isScrolling = false;
-  }, 200);
-
-});
-
-});
-
-// AUTO PLAY (HOME vs NEXT)
-const observer = new IntersectionObserver((entries) => {
-
-  entries.forEach(entry => {
-
-    const video = entry.target.querySelector("video");
-    const index = [...items].indexOf(entry.target);
-
-    if (entry.isIntersecting && entry.intersectionRatio > 0.7) {
-
-      // stop semua video lain
-      document.querySelectorAll("video").forEach(v => {
-        if (v !== video) v.pause();
-      });
-
-      // 🔥 hanya load + play kalau ini video aktif
-      if (index === currentIndex) {
-
-  if (!video.src) {
-    video.src = video.dataset.src;
-  }
-
-  // 🔥 HOME JANGAN AUTO PLAY
-  if (index === 0) {
+  if(index===0 && !hasInteracted){
     video.pause();
   } else {
     video.play().catch(()=>{});
   }
 
+  document.querySelectorAll("video").forEach(v=>v.muted=true);
+  if(hasInteracted) video.muted=false;
+
+  // preload next
+  [index+1,index+2].forEach(i=>{
+    if(items[i]){
+      let v=items[i].querySelector("video");
+      if(!v.src) v.src=v.dataset.src;
+      v.preload="auto";
+    }
+  });
 }
 
-      // 🔥 preload video berikutnya
-      const next = items[index + 1];
-
-      if (next) {
-        const nextVideo = next.querySelector("video");
-
-        if (!nextVideo.src) {
-          nextVideo.src = nextVideo.dataset.src;
-        }
+// ======================
+// OBSERVER
+// ======================
+const observer = new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    const i=[...items].indexOf(e.target);
+    if(e.isIntersecting && e.intersectionRatio>0.75){
+      if(!isProgrammaticScroll){
+        activate(i);
       }
+    }
+  });
+},{threshold:0.75});
 
+items.forEach(i=>observer.observe(i));
+
+// ======================
+// CLICK
+// ======================
+items.forEach((item,index)=>{
+  const video=item.querySelector("video");
+  const btn=item.querySelector(".control-btn");
+  const bar=item.querySelector(".progress-bar");
+
+  let timer;
+
+  item.addEventListener("click",()=>{
+    hasInteracted=true;
+
+    if(video.paused){
+      video.play().catch(()=>{});
     } else {
+      video.dataset.userPause="true";
       video.pause();
     }
 
+    btn.classList.add("show");
+    clearTimeout(timer);
+    timer=setTimeout(()=>btn.classList.remove("show"),1000);
+
+    document.querySelectorAll("video").forEach(v=>v.muted=true);
+    video.muted=false;
   });
 
-}, {
-  threshold: 0.7
+  video.addEventListener("timeupdate",()=>{
+    if(!video.duration) return;
+    bar.style.width=(video.currentTime/video.duration)*100+"%";
+  });
+
+  video.dataset.pauseCount="0";
+
+  video.addEventListener("pause",()=>{
+    if(video.dataset.userPause==="true" && index===currentIndex){
+      let c=parseInt(video.dataset.pauseCount);
+      c++;
+      video.dataset.pauseCount=c;
+      video.dataset.userPause="false";
+
+      if(c>=2 && !video.dataset.redirected){
+        video.dataset.redirected="true";
+        setTimeout(()=>{
+          window.location.href = videos[index].cta;
+        },300);
+      }
+    }
+  });
+
+  video.addEventListener("ended",()=>{
+    scrollToIndex(getNextIndex(1));
+  });
 });
 
-items.forEach(item => observer.observe(item));
-</script>
-  
-<script>
-const feedEl = document.getElementById("feed");
-let startY = 0;
-let endY = 0;
+// ======================
+// SWIPE
+// ======================
+let startY=0;
 
-feedEl.addEventListener("touchstart", (e) => {
-  startY = e.touches[0].clientY;
+feed.addEventListener("touchstart",e=>{
+  startY=e.touches[0].clientY;
 });
 
-feedEl.addEventListener("touchend", (e) => {
+feed.addEventListener("touchend",e=>{
+  let delta=startY-e.changedTouches[0].clientY;
+  if(Math.abs(delta)<50) return;
 
-  if (isScrolling) return;
+  hasInteracted=true;
 
-  endY = e.changedTouches[0].clientY;
-  const delta = startY - endY;
-
-  if (Math.abs(delta) < 50) return;
-
-  isScrolling = true;
-
-  if (delta > 0) currentIndex++;
-  else currentIndex--;
-
-  if (currentIndex >= items.length) currentIndex = 0;
-  if (currentIndex < 0) currentIndex = items.length - 1;
-
-  // 🔥 HARD SNAP (ANTI SKIP)
-  feedEl.scrollTo({
-  top: items[currentIndex].offsetTop,
-  behavior: "auto"
+  if(delta>0){
+    scrollToIndex(getNextIndex(1));
+  } else {
+    scrollToIndex(getNextIndex(-1));
+  }
 });
 
-// 🔥 anggap swipe = interaksi
-hasInteracted = true;
+// ======================
+// SCROLL CONTROL
+// ======================
+function scrollToIndex(index){
+  isProgrammaticScroll=true;
 
-// 🔥 ambil video aktif
-const currentVideo = items[currentIndex].querySelector("video");
+  activate(index);
 
-// 🔥 load kalau belum
-if (!currentVideo.src) {
-  currentVideo.src = currentVideo.dataset.src;
+  items[currentIndex].scrollIntoView({behavior:"auto"});
+
+  setTimeout(()=>isProgrammaticScroll=false,120);
 }
-
-// 🔥 paksa play
-currentVideo.play().catch(()=>{});
-
-// 🔥 aktifkan audio setelah swipe
-if (hasInteracted) {
-  document.querySelectorAll("video").forEach(v => v.muted = true);
-  currentVideo.muted = false;
-}
-
-setTimeout(() => {
-  isScrolling = false;
-}, 200);
-
-});
 </script>
-  <script>
-window.addEventListener("load", () => {
 
-  const text = document.querySelector(".swipe-text");
-
-  // hanya muncul di HOME awal
-  setTimeout(() => {
-
-    text.style.opacity = "1";
-
-    // hilang setelah 3 detik
-    setTimeout(() => {
-      text.style.opacity = "0";
-    }, 3000);
-
-  }, 800);
-
-});
-  </script>
-  <script>
-const logo = document.getElementById("logoHome");
-
-
-  // 🔥 stop video aktif dulu (biar observer tidak ganggu)
-logo.addEventListener("click", (e) => {
-
-  e.stopPropagation();
-
-  if (isScrolling) return;
-
-  isScrolling = true;
-
-  // 🔥 reset index
-  currentIndex = 0;
-
-  // 🔥 scroll ke video pertama
-  items[0].scrollIntoView({
-    behavior: "auto"
-  });
-
-  // 🔥 stop semua video
-  document.querySelectorAll("video").forEach(v => {
-    v.pause();
-    v.currentTime = 0;
-  });
-
-  // 🔥 tampilkan tombol play di home lagi
-  const firstBtn = items[0].querySelector(".control-btn");
-  firstBtn.classList.add("show");
-  firstBtn.textContent = "▶";
-
-  setTimeout(() => {
-    isScrolling = false;
-  }, 200);
-
-});
-  </script>
 </body>
 </html>
