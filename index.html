@@ -59,8 +59,8 @@ body {
   
 .feed {
   height: 100vh;
-  overflow-y: scroll;
-  scroll-snap-type: y mandatory;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
 }
 
 /* 🔥 FULL 1 LAYAR (IMPORTANT FIX) */
@@ -326,12 +326,18 @@ const observer = new IntersectionObserver((entries) => {
       // 🔥 hanya load + play kalau ini video aktif
       if (index === currentIndex) {
 
-        if (!video.src) {
-          video.src = video.dataset.src;
-        }
+  if (!video.src) {
+    video.src = video.dataset.src;
+  }
 
-        video.play().catch(()=>{});
-      }
+  // 🔥 HOME JANGAN AUTO PLAY
+  if (index === 0) {
+    video.pause();
+  } else {
+    video.play().catch(()=>{});
+  }
+
+}
 
       // 🔥 preload video berikutnya
       const next = items[index + 1];
@@ -380,13 +386,17 @@ feedEl.addEventListener("touchend", (e) => {
   if (delta > 0) currentIndex++;
   else currentIndex--;
 
-  // 🔥 infinite loop
   if (currentIndex >= items.length) currentIndex = 0;
   if (currentIndex < 0) currentIndex = items.length - 1;
 
-  items[currentIndex].scrollIntoView({
-    behavior: "auto"
-  });
+  // 🔥 HARD SNAP (ANTI SKIP)
+  feedEl.scrollTop = items[currentIndex].offsetTop;
+
+  setTimeout(() => {
+    isScrolling = false;
+  }, 200);
+
+});
 
   setTimeout(() => {
     isScrolling = false;
