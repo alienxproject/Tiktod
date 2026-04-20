@@ -339,13 +339,9 @@ const observer = new IntersectionObserver((entries) => {
   }
 
   // 🔥 HOME JANGAN AUTO PLAY
-  if (index === currentIndex) {
-
-  if (!video.src) {
-    video.src = video.dataset.src;
-  }
-
-  if (video.paused) {
+  if (index === 0) {
+    video.pause();
+  } else {
     video.play().catch(()=>{});
   }
 
@@ -420,11 +416,6 @@ if (!currentVideo.src) {
 
 // 🔥 paksa play
 currentVideo.play().catch(()=>{});
-
-// 🔥 jaga kalau observer ganggu
-setTimeout(() => {
-  currentVideo.play().catch(()=>{});
-}, 50);
 
 // 🔥 aktifkan audio setelah swipe
 if (hasInteracted) {
