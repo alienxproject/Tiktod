@@ -230,7 +230,10 @@ items.forEach((item, index) => {
 
   // PLAY / PAUSE
   item.addEventListener("click", () => {
-    // 🔥 hanya tandai kalau user MAU PAUSE
+    // 🔥 hanya PAUSE
+    if (video.muted) {
+  video.muted = false;
+    }
   if (!video.paused) {
     video.dataset.userPause = "true";
   }
