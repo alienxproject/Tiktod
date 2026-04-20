@@ -170,6 +170,7 @@ const feed = document.getElementById("feed");
 
 let items = [];
 let currentIndex = 0;
+let isScrolling = false;
 
 // RENDER
 videos.forEach((v, i) => {
@@ -287,20 +288,23 @@ video.addEventListener("pause", () => {
   // AUTO NEXT VIDEO WHEN END 🔥 (FIX UTAMA YANG KAMU MAU)
   video.addEventListener("ended", () => {
 
-    // swipe ke video berikutnya
-    const current = [...items].indexOf(item);
-    const next = items[current + 1];
+  if (isScrolling) return;
 
-    if (next) {
-      next.scrollIntoView({ behavior: "smooth" });
+  currentIndex++;
+  if (currentIndex >= items.length) currentIndex = 0;
 
-      const nextVideo = next.querySelector("video");
-      setTimeout(() => {
-        nextVideo.play().catch(()=>{});
-      }, 300);
-    }
+  isScrolling = true;
 
-  });
+  items[currentIndex].scrollIntoView({ behavior: "auto" });
+
+  const nextVideo = items[currentIndex].querySelector("video");
+
+  setTimeout(() => {
+    nextVideo.play().catch(()=>{});
+    isScrolling = false;
+  }, 200);
+
+});
 
 });
 
@@ -314,44 +318,31 @@ const observer = new IntersectionObserver((entries) => {
 
     if (entry.isIntersecting && entry.intersectionRatio > 0.7) {
 
-      // stop others
+      // stop semua video lain
       document.querySelectorAll("video").forEach(v => {
         if (v !== video) v.pause();
       });
 
-      // HOME manual
-      if (index === 0) {
-        video.pause();
+      // 🔥 hanya load + play kalau ini video aktif
+      if (index === currentIndex) {
+
+        if (!video.src) {
+          video.src = video.dataset.src;
+        }
+
+        video.play().catch(()=>{});
       }
 
-      // NEXT auto play
-      // 🔥 LOAD VIDEO SAAT MASUK VIEW
-if (!video.src) {
-  video.src = video.dataset.src;
-}
+      // 🔥 preload video berikutnya
+      const next = items[index + 1];
 
-// HOME tetap manual
-if (index === 0) {
-  video.pause();
-}
+      if (next) {
+        const nextVideo = next.querySelector("video");
 
-// NEXT auto play
-if (index > 0) {
-  video.play().catch(()=>{});
-}
-
-// 🔥 PRELOAD VIDEO BERIKUTNYA
-const next = items[index + 1];
-
-if (next) {
-  const nextVideo = next.querySelector("video");
-
-  if (!nextVideo.src) {
-    nextVideo.src = nextVideo.dataset.src;
-  }
-}
-
-      currentIndex = index;
+        if (!nextVideo.src) {
+          nextVideo.src = nextVideo.dataset.src;
+        }
+      }
 
     } else {
       video.pause();
@@ -376,25 +367,30 @@ feedEl.addEventListener("touchstart", (e) => {
 });
 
 feedEl.addEventListener("touchend", (e) => {
-  endY = e.changedTouches[0].clientY;
 
+  if (isScrolling) return;
+
+  endY = e.changedTouches[0].clientY;
   const delta = startY - endY;
 
-  // hanya deteksi swipe ke atas (next video)
-  if (delta > 50) {
+  if (Math.abs(delta) < 50) return;
 
-// 🔥 kalau sudah di video terakhir
-if (currentIndex === items.length - 1) {
+  isScrolling = true;
 
-  items[0].scrollIntoView({
+  if (delta > 0) currentIndex++;
+  else currentIndex--;
+
+  // 🔥 infinite loop
+  if (currentIndex >= items.length) currentIndex = 0;
+  if (currentIndex < 0) currentIndex = items.length - 1;
+
+  items[currentIndex].scrollIntoView({
     behavior: "auto"
   });
 
-  currentIndex = 0;
-
-}
-
-  }
+  setTimeout(() => {
+    isScrolling = false;
+  }, 200);
 
 });
 </script>
@@ -425,27 +421,26 @@ const feed = document.getElementById("feed");
   // 🔥 stop video aktif dulu (biar observer tidak ganggu)
 logo.addEventListener("click", (e) => {
 
-  // 🔥 STOP event ke bawah (INI KUNCI)
   e.stopPropagation();
 
-  // 🔥 matikan observer sementara
-  observer.disconnect();
+  if (isScrolling) return;
 
-  // 🔥 lompat ke video pertama
+  isScrolling = true;
+
+  currentIndex = 0;
+
   items[0].scrollIntoView({
     behavior: "auto"
   });
 
-  // 🔥 reset video
   document.querySelectorAll("video").forEach(v => {
     v.pause();
     v.currentTime = 0;
   });
 
-  currentIndex = 0;
-
-  // 🔥 aktifkan lagi observer
-  items.forEach(item => observer.observe(item));
+  setTimeout(() => {
+    isScrolling = false;
+  }, 200);
 
 });
   </script>
