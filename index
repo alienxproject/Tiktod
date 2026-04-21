@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>TikTod</title>
+<link rel="icon" href="https://static.vecteezy.com/system/resources/thumbnails/045/832/436/small_2x/3d-pink-alphabet-letter-t-png.png">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #000;
+    font-family: 'Segoe UI', sans-serif;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+    position: fixed;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  /* ── FEED CONTAINER ── */
+  #feed {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* ── EACH VIDEO SLOT ── */
+  .slide {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+    will-change: transform;
+  }
+
+  .slide.active {
+    opacity: 1;
+    pointer-events: auto;
+    z-index: 2;
+  }
+
+  .slide video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  /* ── GRADIENT OVERLAY ── */
+  .slide::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to bottom,
+      rgba(0,0,0,0.15) 0%,
+      transparent 30%,
+      transparent 55%,
+      rgba(0,0,0,0.6) 100%
+    );
+    pointer-events: none;
+    z-index: 3;
+  }
+
+  /* ── INFO BLOCK ── */
+  .info {
+    position: absolute;
+    bottom: 70px;
+    left: 14px;
+    right: 80px;
+    z-index: 5;
+    color: #fff;
+  }
+
+  .info h3 {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    text-shadow: 0 1px 6px rgba(0,0,0,0.7);
+    margin-bottom: 4px;
+    line-height: 1.3;
+  }
+
+  .info span {
+    font-size: 12px;
+    opacity: 0.75;
+    font-weight: 400;
+  }
+
+  /* ── PROGRESS BAR ── */
+  .progress-wrap {
+    position: absolute;
+    bottom: 44px;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: rgba(255,255,255,0.2);
+    z-index: 6;
+    cursor: pointer;
+  }
+
+  .progress-fill {
+    height: 100%;
+    width: 0%;
+    background: #fff;
+    border-radius: 2px;
+    transition: width 0.1s linear;
+    pointer-events: none;
+  }
+
+  /* ── PLAY/PAUSE ICON ── */
+  .play-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.7);
+    font-size: 64px;
+    color: #fff;
+    z-index: 7;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s, transform 0.15s;
+    text-shadow: 0 0 30px rgba(0,0,0,0.6);
+    filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5));
+  }
+
+  .play-icon.show {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  /* ── LOGO ── */
+  #logoHome {
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    z-index: 9999;
+    cursor: pointer;
+    transition: transform 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  #logoHome:active { transform: scale(0.93); }
+
+  #logoHome img {
+    width: 90px;
+    height: auto;
+    display: block;
+    filter: drop-shadow(0 2px 8px rgba(0,0,0,0.4));
+  }
+
+  /* ── SWIPE HINT ── */
+  #swipeHint {
+    position: fixed;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%) translateY(0);
+    z-index: 9999;
+    color: #fff;
+    font-size: 13px;
+    background: rgba(255,255,255,0.12);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.15);
+    padding: 7px 16px;
+    border-radius: 20px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.5s;
+    white-space: nowrap;
+  }
+
+  #swipeHint.show {
+    opacity: 1;
+    animation: hintBounce 1.4s ease-in-out infinite;
+  }
+
+  @keyframes hintBounce {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50% { transform: translateX(-50%) translateY(-7px); }
+  }
+
+  /* ── INDEX DOTS ── */
+  #dots {
+    position: fixed;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 60vh;
+    overflow: hidden;
+    align-items: center;
+  }
+
+  .dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.3);
+    transition: all 0.25s;
+    flex-shrink: 0;
+  }
+
+  .dot.active {
+    background: #fff;
+    height: 16px;
+    border-radius: 3px;
+  }
+
+  /* ── SWIPE TRANSITION OVERLAY ── */
+  #swipeOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 8;
+    pointer-events: none;
+    background: #000;
+    opacity: 0;
+    transition: opacity 0.1s;
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGO -->
+<div id="logoHome">
+  <img src="https://i.ibb.co.com/5XCdSQrN/Tik-Tod-1.png" alt="TikTod">
+</div>
+
+<!-- SWIPE HINT -->
+<div id="swipeHint">☝️ swipe up untuk next</div>
+
+<!-- SIDE DOTS -->
+<div id="dots"></div>
+
+<!-- SWIPE OVERLAY -->
+<div id="swipeOverlay"></div>
+
+<!-- FEED -->
+<div id="feed"></div>
+
+<!-- Videos data -->
+<script src="data/videos.js"></script>
+
+<script>
+/*
+ * TikTod — Clean Architecture
+ * Features: swipe lock (1 per swipe), autoplay, lazy preload,
+ *           audio always on after first interaction, play/pause click,
+ *           CTA redirect (2nd pause), auto-next on end, loop, logo reset,
+ *           progress bar, shuffle, no double-swipe.
+ */
+
+// ─── UTILS ─────────────────────────────────────────────────────────────────
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// ─── STATE ──────────────────────────────────────────────────────────────────
+
+const videoList = shuffle(videos); // Shuffle sekali, simpan di variable baru
+const total = videoList.length;
+
+let current = 0;          // index aktif
+let locked  = false;      // mencegah double swipe
+let interacted = false;   // user sudah touch/klik?
+
+const feed      = document.getElementById('feed');
+const dots      = document.getElementById('dots');
+const overlay   = document.getElementById('swipeOverlay');
+const swipeHint = document.getElementById('swipeHint');
+
+// Array DOM slide
+const slides = [];
+
+// pauseCount per video (untuk CTA redirect)
+const pauseCount = new Array(total).fill(0);
+
+// ─── BUILD DOM ──────────────────────────────────────────────────────────────
+
+videoList.forEach((v, i) => {
+  // Slide wrapper
+  const slide = document.createElement('div');
+  slide.className = 'slide';
+  slide.dataset.index = i;
+
+  // Video element
+  const vid = document.createElement('video');
+  vid.setAttribute('playsinline', '');
+  vid.setAttribute('webkit-playsinline', '');
+  vid.loop = true; // Loop tiap video
+  vid.muted = true;
+  vid.preload = 'none';
+  if (v.thumb) vid.poster = v.thumb;
+
+  // Hanya video pertama langsung load src
+  if (i === 0) {
+    vid.src = v.src;
+    vid.preload = 'metadata';
+  } else {
+    vid.dataset.src = v.src;
+  }
+
+  // Info
+  const info = document.createElement('div');
+  info.className = 'info';
+  info.innerHTML = `<h3>${v.title || ''}</h3><span>${v.views || ''}</span>`;
+
+  // Progress
+  const progressWrap = document.createElement('div');
+  progressWrap.className = 'progress-wrap';
+  const progressFill = document.createElement('div');
+  progressFill.className = 'progress-fill';
+  progressWrap.appendChild(progressFill);
+
+  // Play icon
+  const playIcon = document.createElement('div');
+  playIcon.className = 'play-icon';
+  playIcon.textContent = '⏸';
+
+  slide.appendChild(vid);
+  slide.appendChild(info);
+  slide.appendChild(progressWrap);
+  slide.appendChild(playIcon);
+  feed.appendChild(slide);
+  slides.push(slide);
+
+  // ── Events per slide ──
+
+  // timeupdate → progress bar
+  vid.addEventListener('timeupdate', () => {
+    if (!vid.duration) return;
+    progressFill.style.width = (vid.currentTime / vid.duration * 100) + '%';
+  });
+
+  // Video ended → auto next
+  // (loop=true sudah handle loop di video terakhir, tapi kalau mau next bisa override)
+  // Karena loop=true, "ended" tidak akan fire. Kita handle loop manual agar
+  // video terakhir bisa lanjut ke video pertama.
+  vid.loop = false;
+  vid.addEventListener('ended', () => {
+    if (i !== current) return;
+    navigateTo((current + 1) % total);
+  });
+
+  // Click → play/pause
+  slide.addEventListener('click', (e) => {
+    if (locked) return;
+    e.stopPropagation();
+
+    // Unmute on first interaction
+    if (!interacted) {
+      interacted = true;
+      vid.muted = false;
+    }
+
+    if (vid.paused) {
+      vid.play().catch(() => {});
+      playIcon.textContent = '▶';
+      flashIcon(playIcon);
+    } else {
+      pauseCount[i]++;
+      vid.pause();
+      playIcon.textContent = '⏸';
+      flashIcon(playIcon);
+
+      // CTA redirect saat pause ke-2
+      if (pauseCount[i] >= 2 && videoList[i].cta) {
+        setTimeout(() => {
+          window.location.href = videoList[i].cta;
+        }, 350);
+      }
+    }
+  });
+
+  // Progress bar click → seek
+  progressWrap.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (!vid.duration) return;
+    const rect = progressWrap.getBoundingClientRect();
+    const ratio = (e.clientX - rect.left) / rect.width;
+    vid.currentTime = ratio * vid.duration;
+  });
+});
+
+// Dot indicators
+videoList.forEach((_, i) => {
+  const dot = document.createElement('div');
+  dot.className = 'dot' + (i === 0 ? ' active' : '');
+  dots.appendChild(dot);
+});
+
+// ─── NAVIGATION ─────────────────────────────────────────────────────────────
+
+function getVideo(index) {
+  return slides[index].querySelector('video');
+}
+
+function loadVideo(index) {
+  const vid = getVideo(index);
+  if (!vid.src && vid.dataset.src) {
+    vid.src = vid.dataset.src;
+  }
+}
+
+function flashIcon(icon) {
+  icon.classList.add('show');
+  clearTimeout(icon._timer);
+  icon._timer = setTimeout(() => icon.classList.remove('show'), 900);
+}
+
+function navigateTo(nextIndex, instant = false) {
+  if (locked && !instant) return;
+  if (nextIndex === current && !instant) return;
+
+  locked = true;
+
+  const prevIndex = current;
+  current = nextIndex;
+
+  // Pause semua video lain
+  slides.forEach((s, i) => {
+    if (i !== current) {
+      const v = s.querySelector('video');
+      v.pause();
+      s.classList.remove('active');
+    }
+  });
+
+  // Aktifkan slide baru
+  const nextSlide = slides[current];
+  nextSlide.classList.add('active');
+
+  // Update dots
+  document.querySelectorAll('.dot').forEach((d, i) => {
+    d.classList.toggle('active', i === current);
+  });
+
+  // Load jika belum
+  loadVideo(current);
+
+  // Preload next
+  const preloadIdx = (current + 1) % total;
+  loadVideo(preloadIdx);
+
+  // Play video baru
+  const vid = getVideo(current);
+  vid.currentTime = 0;
+
+  if (interacted) {
+    // Sudah pernah interaksi → langsung play dengan audio
+    vid.muted = false;
+    vid.play().catch(() => { vid.muted = true; vid.play().catch(() => {}); });
+  } else {
+    // Belum interaksi (video pertama) → tampilkan play icon, jangan autoplay
+    if (current === 0 && prevIndex === 0) {
+      // First load, tunjukkan play button
+      const playIcon = nextSlide.querySelector('.play-icon');
+      playIcon.textContent = '▶';
+      playIcon.classList.add('show');
+    } else {
+      vid.muted = true;
+      vid.play().catch(() => {});
+    }
+  }
+
+  // Unlock setelah transisi selesai
+  setTimeout(() => {
+    locked = false;
+  }, 350);
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+
+// Aktifkan slide pertama
+slides[0].classList.add('active');
+loadVideo(1); // Preload video ke-2
+
+// Tampilkan play icon di video pertama
+const firstPlayIcon = slides[0].querySelector('.play-icon');
+firstPlayIcon.textContent = '▶';
+firstPlayIcon.classList.add('show');
+
+// Swipe hint
+setTimeout(() => {
+  swipeHint.classList.add('show');
+  setTimeout(() => swipeHint.classList.remove('show'), 3500);
+}, 1000);
+
+// ─── TOUCH SWIPE ─────────────────────────────────────────────────────────────
+
+let touchStartY = 0;
+let touchStartX = 0;
+let touchStartTime = 0;
+let isSwiping = false;
+
+feed.addEventListener('touchstart', (e) => {
+  if (locked) return;
+  touchStartY = e.touches[0].clientY;
+  touchStartX = e.touches[0].clientX;
+  touchStartTime = Date.now();
+  isSwiping = false;
+}, { passive: true });
+
+feed.addEventListener('touchmove', (e) => {
+  if (locked) return;
+  const deltaY = touchStartY - e.touches[0].clientY;
+  const deltaX = touchStartX - e.touches[0].clientX;
+  // Prioritaskan swipe vertikal
+  if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 10) {
+    isSwiping = true;
+  }
+}, { passive: true });
+
+feed.addEventListener('touchend', (e) => {
+  if (locked || !isSwiping) return;
+
+  const deltaY = touchStartY - e.changedTouches[0].clientY;
+  const elapsed = Date.now() - touchStartTime;
+
+  // Threshold: minimal 40px atau swipe cepat (velocity)
+  const velocity = Math.abs(deltaY) / elapsed;
+  const isSwipe = Math.abs(deltaY) > 40 || velocity > 0.3;
+
+  if (!isSwipe) return;
+
+  if (deltaY > 0) {
+    // Swipe UP → next
+    navigateTo((current + 1) % total);
+  } else {
+    // Swipe DOWN → prev
+    navigateTo((current - 1 + total) % total);
+  }
+
+  // Tandai sudah interaksi
+  if (!interacted) interacted = true;
+
+  isSwiping = false;
+}, { passive: true });
+
+// ─── KEYBOARD (Desktop) ──────────────────────────────────────────────────────
+
+document.addEventListener('keydown', (e) => {
+  if (locked) return;
+  if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+    navigateTo((current + 1) % total);
+  } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+    navigateTo((current - 1 + total) % total);
+  } else if (e.key === ' ') {
+    e.preventDefault();
+    slides[current].click();
+  }
+});
+
+// ─── MOUSE WHEEL (Desktop) ───────────────────────────────────────────────────
+
+let wheelCooldown = false;
+feed.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  if (locked || wheelCooldown) return;
+  wheelCooldown = true;
+  setTimeout(() => wheelCooldown = false, 500);
+
+  if (e.deltaY > 0) {
+    navigateTo((current + 1) % total);
+  } else {
+    navigateTo((current - 1 + total) % total);
+  }
+}, { passive: false });
+
+// ─── LOGO HOME ───────────────────────────────────────────────────────────────
+
+document.getElementById('logoHome').addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (current === 0) {
+    // Sudah di home, reset video
+    const vid = getVideo(0);
+    vid.currentTime = 0;
+    vid.pause();
+    const pi = slides[0].querySelector('.play-icon');
+    pi.textContent = '▶';
+    pi.classList.add('show');
+    return;
+  }
+  navigateTo(0, true);
+});
+
+// ─── AUDIO UNLOCK (iOS workaround) ───────────────────────────────────────────
+
+document.addEventListener('touchstart', () => {
+  if (!interacted) interacted = true;
+}, { once: true, passive: true });
+</script>
+</body>
+</html>
+
