@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TikTod</title>
+
+<link rel="icon" href="https://static.vecteezy.com/system/resources/thumbnails/045/832/436/small_2x/3d-pink-alphabet-letter-t-png.png">
+
+<style>
+body {
+  margin: 0;
+  background: black;
+  font-family: sans-serif;
+  overflow: hidden;
+}
+
+.logo-wrap {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 9999;
+  pointer-events: auto;
+}
+
+.logo-wrap img {
+  width: 100px;
+  height: auto;
+  display: block;
+}
+
+/* FIX BUG 5: animasi hanya jalan saat visible */
+.swipe-text {
+  position: fixed;
+  top: 22%;
+  left: 50%;
+  transform: translateX(-50%);
+  color: white;
+  font-size: 14px;
+  opacity: 0;
+  z-index: 9999;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: rgba(0,0,0,0.25);
+  backdrop-filter: blur(6px);
+  pointer-events: none;
+  transition: opacity 0.4s;
+  text-align: center;
+}
+
+/* Animasi hanya aktif saat class .visible ada */
+.swipe-text.visible {
+  opacity: 1;
+  animation: swipeBounce 1.2s infinite;
+}
+
+@keyframes swipeBounce {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(-8px); }
+}
+
+.feed {
+  height: 100vh;
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  scroll-behavior: auto;
+}
+
+.video-item {
+  height: 100vh;
+  width: 100vw;
+  position: relative;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  overflow: hidden;
+}
+
+video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.control-btn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 55px;
+  color: white;
+  z-index: 10;
+  opacity: 0;
+  transition: 0.2s;
+  cursor: pointer;
+  pointer-events: none;
+}
+
+.control-btn.show {
+  opacity: 0.9;
+}
+
+/* FIX BUG 6: progress bar hidden by default, show via class */
+.progress-container {
+  position: absolute;
+  bottom: 25px;
+  left: 10px;
+  right: 10px;
+  height: 4px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 5px;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 6;
+}
+
+.progress-container.show {
+  opacity: 1;
+}
+
+.progress-bar {
+  height: 100%;
+  width: 0%;
+  background: white;
+  border-radius: 5px;
+}
+
+.info {
+  position: absolute;
+  bottom: 60px;
+  left: 10px;
+  right: 10px;
+  color: white;
+  z-index: 5;
+}
+
+.info h3 {
+  margin: 0 0 4px 0;
+}
+</style>
+</head>
+
+<body>
+<div class="logo-wrap" id="logoHome">
+  <img src="https://i.ibb.co.com/5XCdSQrN/Tik-Tod-1.png">
+</div>
+
+<div class="swipe-text" id="swipeText">swipe up ☝️ untuk next</div>
+
+<div class="feed" id="feed"></div>
+
+<script src="data/videos.js"></script>
+
+<script>
+/* SHUFFLE SEKALI SAJA SAAT LOAD */
+(function () {
+  if (!window.__videosShuffled) {
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
+    shuffle(videos);
+    window.__videosShuffled = true;
+  }
+})();
+</script>
+
+<script>
+const feed = document.getElementById("feed");
+
+let items = [];
+let currentIndex = 0;
+let isScrolling = false;
+let hasInteracted = false;
+
+// FIX BUG 1: Gunakan DocumentFragment agar tidak rebuild DOM tiap iterasi
+const fragment = document.createDocumentFragment();
+
+videos.forEach((v, i) => {
+  const div = document.createElement("div");
+  div.className = "video-item";
+
+  const videoTag = document.createElement("video");
+  if (i === 0) {
+    videoTag.src = v.src;
+    videoTag.preload = "metadata";
+  } else {
+    videoTag.dataset.src = v.src;
+    videoTag.preload = "none";
+  }
+  if (v.thumb) videoTag.poster = v.thumb;
+  videoTag.setAttribute("playsinline", "");
+  videoTag.muted = true;
+
+  const btn = document.createElement("div");
+  btn.className = "control-btn";
+  btn.textContent = "▶";
+
+  const progressContainer = document.createElement("div");
+  progressContainer.className = "progress-container";
+  const progressBar = document.createElement("div");
+  progressBar.className = "progress-bar";
+  progressContainer.appendChild(progressBar);
+
+  const info = document.createElement("div");
+  info.className = "info";
+  info.innerHTML = `<h3>${v.title}</h3><span>${v.views}</span>`;
+
+  div.appendChild(videoTag);
+  div.appendChild(btn);
+  div.appendChild(progressContainer);
+  div.appendChild(info);
+  fragment.appendChild(div);
+});
+
+feed.appendChild(fragment);
+items = document.querySelectorAll(".video-item");
+
+// Tampilkan play button di video pertama
+const firstBtn = items[0].querySelector(".control-btn");
+firstBtn.classList.add("show");
+firstBtn.textContent = "▶";
+
+// FORMAT TIME
+function formatTime(s) {
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return `${m}:${sec < 10 ? "0"+sec : sec}`;
+}
+
+// Helper: aktifkan video berdasarkan index
+function activateVideo(index) {
+  const item = items[index];
+  if (!item) return;
+
+  const video = item.querySelector("video");
+  const container = item.querySelector(".progress-container");
+
+  if (!video.src && video.dataset.src) {
+    video.src = video.dataset.src;
+  }
+
+  container.classList.add("show");
+
+  if (index === 0) {
+    video.pause();
+  } else {
+    video.muted = false;
+    video.play().catch(() => {});
+  }
+}
+
+// CONTROL SYSTEM
+items.forEach((item, index) => {
+  const video = item.querySelector("video");
+  video.dataset.pauseCount = "0";
+  const btn = item.querySelector(".control-btn");
+  const bar = item.querySelector(".progress-bar");
+  const container = item.querySelector(".progress-container");
+
+  let hideTimer;
+
+  // FIX BUG 3: Toggle play/pause dengan benar, unmute hanya sekali
+  item.addEventListener("click", () => {
+
+    // Unmute saat pertama kali interaksi
+    if (video.muted) {
+      video.muted = false;
+    }
+
+    container.classList.add("show");
+
+    if (video.paused) {
+      // User mau resume — jangan set userPause
+      video.play().catch(() => {});
+      btn.textContent = "▶";
+    } else {
+      // User mau pause
+      video.dataset.userPause = "true";
+      video.pause();
+      btn.textContent = "⏸";
+    }
+
+    btn.classList.add("show");
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(() => {
+      btn.classList.remove("show");
+    }, 1500);
+  });
+
+  // PROGRESS BAR
+  video.addEventListener("timeupdate", () => {
+    if (video.duration) {
+      const percent = (video.currentTime / video.duration) * 100;
+      bar.style.width = percent + "%";
+    }
+  });
+
+  // REDIRECT SAAT PAUSE (hanya pause ke-2 dari user)
+  video.addEventListener("pause", () => {
+    if (
+      video.dataset.userPause === "true" &&
+      !video.dataset.redirected &&
+      index === currentIndex
+    ) {
+      let count = parseInt(video.dataset.pauseCount || "0");
+      count++;
+      video.dataset.pauseCount = count;
+      video.dataset.userPause = "false";
+
+      if (count >= 2) {
+        video.dataset.redirected = "true";
+        setTimeout(() => {
+          window.location.href = videos[index].cta;
+        }, 300);
+      }
+    }
+  });
+
+  // FIX BUG 7: Auto next — gunakan currentIndex terkini, bukan closure index
+  video.addEventListener("ended", () => {
+    if (isScrolling) return;
+    if (index !== currentIndex) return; // Abaikan video yang bukan aktif
+
+    isScrolling = true;
+    currentIndex++;
+    if (currentIndex >= items.length) currentIndex = 0;
+
+    items[currentIndex].scrollIntoView({ behavior: "auto" });
+
+    // Preload jika belum
+    const nextVideo = items[currentIndex].querySelector("video");
+    if (!nextVideo.src && nextVideo.dataset.src) {
+      nextVideo.src = nextVideo.dataset.src;
+    }
+
+    setTimeout(() => {
+      nextVideo.muted = false;
+      nextVideo.play().catch(() => {});
+      isScrolling = false;
+    }, 200);
+  });
+});
+
+// FIX BUG 2: IntersectionObserver update currentIndex saat scroll manual
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    const video = entry.target.querySelector("video");
+    const index = [...items].indexOf(entry.target);
+    const container = entry.target.querySelector(".progress-container");
+
+    if (entry.isIntersecting && entry.intersectionRatio > 0.7) {
+
+      // Stop semua video lain
+      document.querySelectorAll("video").forEach(v => {
+        if (v !== video) v.pause();
+      });
+
+      // Update currentIndex saat scroll manual (bukan hanya touch)
+      currentIndex = index;
+
+      if (!video.src && video.dataset.src) {
+        video.src = video.dataset.src;
+      }
+
+      container.classList.add("show");
+
+      if (index === 0) {
+        video.pause();
+      } else {
+        video.muted = false;
+        video.play().catch(() => {});
+      }
+
+      // Preload video berikutnya
+      const next = items[index + 1];
+      if (next) {
+        const nextVideo = next.querySelector("video");
+        if (!nextVideo.src && nextVideo.dataset.src) {
+          nextVideo.src = nextVideo.dataset.src;
+        }
+      }
+
+    } else {
+      video.pause();
+    }
+  });
+}, {
+  threshold: 0.7
+});
+
+items.forEach(item => observer.observe(item));
+</script>
+
+<script>
+const feedEl = document.getElementById("feed");
+let startY = 0;
+let endY = 0;
+
+feedEl.addEventListener("touchstart", (e) => {
+  startY = e.touches[0].clientY;
+}, { passive: true });
+
+feedEl.addEventListener("touchend", (e) => {
+
+  // FIX BUG 4: Jika isScrolling, reset dulu jangan langsung return buta
+  if (isScrolling) {
+    // Cukup return — isScrolling akan direset oleh setTimeout di bawah
+    return;
+  }
+
+  endY = e.changedTouches[0].clientY;
+  const delta = startY - endY;
+
+  if (Math.abs(delta) < 50) return;
+
+  isScrolling = true;
+
+  if (delta > 0) currentIndex++;
+  else currentIndex--;
+
+  if (currentIndex >= items.length) currentIndex = 0;
+  if (currentIndex < 0) currentIndex = items.length - 1;
+
+  feedEl.scrollTo({
+    top: items[currentIndex].offsetTop,
+    behavior: "auto"
+  });
+
+  hasInteracted = true;
+
+  const currentVideo = items[currentIndex].querySelector("video");
+
+  if (!currentVideo.src && currentVideo.dataset.src) {
+    currentVideo.src = currentVideo.dataset.src;
+  }
+
+  // Mute semua, unmute yang aktif
+  document.querySelectorAll("video").forEach(v => v.muted = true);
+  currentVideo.muted = false;
+  currentVideo.play().catch(() => {});
+
+  setTimeout(() => {
+    isScrolling = false;
+  }, 400); // Sedikit lebih lama agar scroll snap selesai
+});
+</script>
+
+<script>
+// FIX BUG 5: Tampilkan animasi swipe text dengan class, bukan langsung opacity
+window.addEventListener("load", () => {
+  const text = document.getElementById("swipeText");
+
+  setTimeout(() => {
+    text.classList.add("visible");
+
+    setTimeout(() => {
+      text.classList.remove("visible");
+    }, 3000);
+  }, 800);
+});
+</script>
+
+<script>
+const logo = document.getElementById("logoHome");
+
+logo.addEventListener("click", (e) => {
+  e.stopPropagation();
+
+  if (isScrolling) return;
+
+  isScrolling = true;
+  currentIndex = 0;
+
+  items[0].scrollIntoView({ behavior: "auto" });
+
+  document.querySelectorAll("video").forEach(v => {
+    v.pause();
+    v.currentTime = 0;
+  });
+
+  const firstBtn = items[0].querySelector(".control-btn");
+  firstBtn.classList.add("show");
+  firstBtn.textContent = "▶";
+
+  // Reset progress bars
+  document.querySelectorAll(".progress-bar").forEach(b => b.style.width = "0%");
+
+  setTimeout(() => {
+    isScrolling = false;
+  }, 300);
+});
+</script>
+</body>
+</html>
