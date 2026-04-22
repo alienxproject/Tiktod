@@ -15,7 +15,8 @@
     width: 100vw;
     height: 100vh;
     position: fixed;
-    touch-action: none;
+    /* touch-action: none di body tidak cukup di Chrome Android,
+       dihandle lewat preventDefault di touchmove non-passive */
     user-select: none;
     -webkit-user-select: none;
   }
@@ -161,30 +162,48 @@
     position: fixed;
     bottom: 90px;
     left: 50%;
-    transform: translateX(-50%) translateY(0);
+    /* transform dihandle oleh wrapper agar animasi tidak konflik dengan centering */
     z-index: 9999;
     color: #fff;
-    font-size: 13px;
-    background: rgba(255,255,255,0.12);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(255,255,255,0.15);
-    padding: 7px 16px;
-    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    background: rgba(0,0,0,0.45);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.18);
+    padding: 8px 18px;
+    border-radius: 24px;
     pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.5s;
     white-space: nowrap;
+    /* Gunakan visibility + opacity agar animasi tidak bertabrakan */
+    opacity: 0;
+    visibility: hidden;
+    /* translate center, translateY dipakai animasi */
+    transform: translateX(-50%) translateY(0px);
+    transition: opacity 0.45s ease, visibility 0.45s ease;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.5);
   }
 
+  /* Step 1: fade in (class ini ditambah JS) */
   #swipeHint.show {
     opacity: 1;
-    animation: hintBounce 1.4s ease-in-out infinite;
+    visibility: visible;
+    /* animasi bounce baru jalan setelah visible */
+    animation: hintBounce 1.3s ease-in-out 0.45s infinite;
+  }
+
+  /* Step 2: fade out (class ini ditambah JS) */
+  #swipeHint.hide {
+    opacity: 0;
+    visibility: hidden;
+    animation: none;
+    transition: opacity 0.5s ease, visibility 0.5s ease;
   }
 
   @keyframes hintBounce {
-    0%, 100% { transform: translateX(-50%) translateY(0); }
-    50% { transform: translateX(-50%) translateY(-7px); }
+    0%, 100% { transform: translateX(-50%) translateY(0px); }
+    50%       { transform: translateX(-50%) translateY(-9px); }
   }
 
   /* ── INDEX DOTS ── */
@@ -363,14 +382,17 @@ videoList.forEach((v, i) => {
     if (locked) return;
     e.stopPropagation();
 
-    // Unmute on first interaction
-    if (!interacted) {
-      interacted = true;
-      vid.muted = false;
-    }
+    // Set interacted & unmute SYNCHRONOUS di dalam user gesture
+    // Chrome Android wajib ini — jangan taruh setelah await/Promise
+    interacted = true;
+    vid.muted = false;
 
     if (vid.paused) {
-      vid.play().catch(() => {});
+      vid.play().catch(() => {
+        // Kalau masih gagal (misal sebelum ada interaksi apapun), coba muted
+        vid.muted = true;
+        vid.play().catch(() => {});
+      });
       playIcon.textContent = '▶';
       flashIcon(playIcon);
     } else {
@@ -433,11 +455,10 @@ function navigateTo(nextIndex, instant = false) {
   const prevIndex = current;
   current = nextIndex;
 
-  // Pause semua video lain
+  // Pause & deaktifkan semua slide lain
   slides.forEach((s, i) => {
     if (i !== current) {
-      const v = s.querySelector('video');
-      v.pause();
+      s.querySelector('video').pause();
       s.classList.remove('active');
     }
   });
@@ -451,38 +472,39 @@ function navigateTo(nextIndex, instant = false) {
     d.classList.toggle('active', i === current);
   });
 
-  // Load jika belum
+  // Load src jika belum (lazy)
   loadVideo(current);
 
-  // Preload next
-  const preloadIdx = (current + 1) % total;
-  loadVideo(preloadIdx);
+  // Preload video berikutnya
+  loadVideo((current + 1) % total);
 
-  // Play video baru
   const vid = getVideo(current);
   vid.currentTime = 0;
 
-  if (interacted) {
-    // Sudah pernah interaksi → langsung play dengan audio
-    vid.muted = false;
-    vid.play().catch(() => { vid.muted = true; vid.play().catch(() => {}); });
+  if (current === 0 && !interacted) {
+    // Video pertama sebelum ada interaksi → jangan autoplay, tampilkan play icon
+    const pi = nextSlide.querySelector('.play-icon');
+    pi.textContent = '▶';
+    pi.classList.add('show');
   } else {
-    // Belum interaksi (video pertama) → tampilkan play icon, jangan autoplay
-    if (current === 0 && prevIndex === 0) {
-      // First load, tunjukkan play button
-      const playIcon = nextSlide.querySelector('.play-icon');
-      playIcon.textContent = '▶';
-      playIcon.classList.add('show');
+    // KRITIS untuk Chrome Android:
+    // muted harus di-set synchronous SEBELUM .play() dipanggil
+    // Jangan taruh di dalam .catch() karena itu async dan keluar dari user gesture
+    if (interacted) {
+      vid.muted = false;
     } else {
       vid.muted = true;
-      vid.play().catch(() => {});
     }
+    vid.play().catch(() => {
+      // Fallback: kalau gagal play dengan audio, coba muted
+      // Jangan unmute di sini karena sudah keluar dari user gesture
+      vid.muted = true;
+      vid.play().catch(() => {});
+    });
   }
 
-  // Unlock setelah transisi selesai
-  setTimeout(() => {
-    locked = false;
-  }, 350);
+  // Unlock setelah transisi
+  setTimeout(() => { locked = false; }, 380);
 }
 
 // ─── INIT ────────────────────────────────────────────────────────────────────
@@ -496,61 +518,78 @@ const firstPlayIcon = slides[0].querySelector('.play-icon');
 firstPlayIcon.textContent = '▶';
 firstPlayIcon.classList.add('show');
 
-// Swipe hint
+// ── Swipe Hint: muncul 800ms setelah load, hilang setelah 4 detik atau saat swipe pertama
+let hintDismissed = false;
+
+function dismissHint() {
+  if (hintDismissed) return;
+  hintDismissed = true;
+  swipeHint.classList.remove('show');
+  swipeHint.classList.add('hide');
+}
+
 setTimeout(() => {
+  if (hintDismissed) return;
   swipeHint.classList.add('show');
-  setTimeout(() => swipeHint.classList.remove('show'), 3500);
-}, 1000);
+  // Auto hilang setelah 4 detik
+  setTimeout(dismissHint, 4000);
+}, 800);
 
-// ─── TOUCH SWIPE ─────────────────────────────────────────────────────────────
+// ─── TOUCH SWIPE — Chrome Android Fix ───────────────────────────────────────
+// KRITIS: touchmove HARUS non-passive agar e.preventDefault() bisa dipanggil
+// Tanpa ini, Chrome Android tetap scroll native meski ada handler kita
 
-let touchStartY = 0;
-let touchStartX = 0;
+let touchStartY   = 0;
+let touchStartX   = 0;
 let touchStartTime = 0;
-let isSwiping = false;
+let touchIsVertical = false; // true setelah gerakan vertical terkonfirmasi
 
 feed.addEventListener('touchstart', (e) => {
   if (locked) return;
-  touchStartY = e.touches[0].clientY;
-  touchStartX = e.touches[0].clientX;
-  touchStartTime = Date.now();
-  isSwiping = false;
-}, { passive: true });
+  touchStartY      = e.touches[0].clientY;
+  touchStartX      = e.touches[0].clientX;
+  touchStartTime   = Date.now();
+  touchIsVertical  = false;
+}, { passive: true }); // touchstart boleh passive
 
 feed.addEventListener('touchmove', (e) => {
-  if (locked) return;
-  const deltaY = touchStartY - e.touches[0].clientY;
-  const deltaX = touchStartX - e.touches[0].clientX;
-  // Prioritaskan swipe vertikal
-  if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 10) {
-    isSwiping = true;
+  // HARUS non-passive supaya preventDefault bisa dipanggil
+  const dy = touchStartY - e.touches[0].clientY;
+  const dx = touchStartX - e.touches[0].clientX;
+
+  if (!touchIsVertical) {
+    // Tentukan arah sekali saja setelah 8px gerakan
+    if (Math.abs(dy) < 8 && Math.abs(dx) < 8) return;
+    touchIsVertical = Math.abs(dy) >= Math.abs(dx);
   }
-}, { passive: true });
+
+  if (touchIsVertical) {
+    // BLOCK native scroll Chrome Android
+    e.preventDefault();
+  }
+}, { passive: false }); // ← NON-PASSIVE, wajib untuk preventDefault
 
 feed.addEventListener('touchend', (e) => {
-  if (locked || !isSwiping) return;
+  if (!touchIsVertical) return; // bukan swipe vertikal, abaikan
+  if (locked) return;
 
-  const deltaY = touchStartY - e.changedTouches[0].clientY;
+  const dy      = touchStartY - e.changedTouches[0].clientY;
   const elapsed = Date.now() - touchStartTime;
+  const velocity = Math.abs(dy) / Math.max(elapsed, 1);
 
-  // Threshold: minimal 40px atau swipe cepat (velocity)
-  const velocity = Math.abs(deltaY) / elapsed;
-  const isSwipe = Math.abs(deltaY) > 40 || velocity > 0.3;
+  // Threshold: 40px minimum ATAU swipe cepat
+  if (Math.abs(dy) < 40 && velocity < 0.3) return;
 
-  if (!isSwipe) return;
+  // Set interacted SEKARANG (dalam user gesture) sebelum play dipanggil
+  // Ini penting untuk Chrome Android audio policy
+  interacted = true;
+  dismissHint();
 
-  if (deltaY > 0) {
-    // Swipe UP → next
+  if (dy > 0) {
     navigateTo((current + 1) % total);
   } else {
-    // Swipe DOWN → prev
     navigateTo((current - 1 + total) % total);
   }
-
-  // Tandai sudah interaksi
-  if (!interacted) interacted = true;
-
-  isSwiping = false;
 }, { passive: true });
 
 // ─── KEYBOARD (Desktop) ──────────────────────────────────────────────────────
@@ -558,6 +597,7 @@ feed.addEventListener('touchend', (e) => {
 document.addEventListener('keydown', (e) => {
   if (locked) return;
   if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+    dismissHint();
     navigateTo((current + 1) % total);
   } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
     navigateTo((current - 1 + total) % total);
@@ -575,7 +615,7 @@ feed.addEventListener('wheel', (e) => {
   if (locked || wheelCooldown) return;
   wheelCooldown = true;
   setTimeout(() => wheelCooldown = false, 500);
-
+  dismissHint();
   if (e.deltaY > 0) {
     navigateTo((current + 1) % total);
   } else {
@@ -600,12 +640,11 @@ document.getElementById('logoHome').addEventListener('click', (e) => {
   navigateTo(0, true);
 });
 
-// ─── AUDIO UNLOCK (iOS workaround) ───────────────────────────────────────────
-
-document.addEventListener('touchstart', () => {
-  if (!interacted) interacted = true;
-}, { once: true, passive: true });
+// ─── AUDIO UNLOCK ────────────────────────────────────────────────────────────
+// Tidak perlu listener terpisah — interacted di-set synchronous
+// langsung di dalam touchend dan click handler (user gesture).
+// Chrome Android hanya izinkan unmute jika dipanggil synchronous
+// di dalam stack call yang dimulai dari user gesture.
 </script>
 </body>
 </html>
-
