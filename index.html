@@ -245,12 +245,9 @@ let   current    = 0;
 let   locked     = false;
 let   interacted = false;
 
-const finished = new Array(total).fill(false);
-
-// CTA: hitung swipe, redirect 1x setelah 3 swipe, pakai cta video pertama yg punya field cta
-let swipeCount   = 0;
-let ctaFired     = false;
-const CTA_SWIPES = 3; // redirect setelah sekian swipe
+// Track apakah video sudah selesai ditonton (ended) → perlu reset currentTime
+const finished   = new Array(total).fill(false);
+const pauseCount = new Array(total).fill(0);
 
 const feed      = document.getElementById('feed');
 const dotsEl    = document.getElementById('dots');
@@ -307,10 +304,7 @@ vlist.forEach((v, i) => {
 
   // Spinner saat buffering
   vid.addEventListener('waiting',  () => { if (i === current) spinner.classList.add('show'); });
-  vid.addEventListener('playing',  () => {
-    spinner.classList.remove('show');
-    playIcon.classList.remove('show'); // hide icon saat video mulai jalan
-  });
+  vid.addEventListener('playing',  () => spinner.classList.remove('show'));
   vid.addEventListener('canplay',  () => spinner.classList.remove('show'));
   vid.addEventListener('stalled',  () => { if (i === current) spinner.classList.add('show'); });
 
@@ -339,7 +333,11 @@ vlist.forEach((v, i) => {
       flashIcon(playIcon, '▶');
     } else {
       vid.pause();
+      pauseCount[i]++;
       flashIcon(playIcon, '⏸');
+      if (pauseCount[i] >= 2 && vlist[i].cta) {
+        setTimeout(() => { window.location.href = vlist[i].cta; }, 350);
+      }
     }
   });
 
@@ -411,9 +409,6 @@ function goTo(next, force) {
 
   locked = true;
 
-  // Sembunyikan play icon di slide yang akan ditinggalkan
-  slides[current].querySelector('.play-icon').classList.remove('show');
-
   // Pause & hide semua slide lain
   slides.forEach((s, i) => {
     if (i !== next) {
@@ -435,7 +430,7 @@ function goTo(next, force) {
   ensureSrc((current + 2) % total);
 
   if (current === 0 && !interacted) {
-    // Video pertama, belum ada interaksi SAMA SEKALI → tampilkan play icon
+    // Video pertama, belum ada interaksi → tampilkan play icon, jangan autoplay
     const pi = slides[0].querySelector('.play-icon');
     pi.textContent = '▶';
     pi.classList.add('show');
@@ -444,20 +439,10 @@ function goTo(next, force) {
   }
 
   playVid(current);
-  setTimeout(() => { locked = false; }, 280);
 
-  // ── CTA: hitung swipe, redirect 1x setelah CTA_SWIPES kali ──
-  if (!ctaFired && !force) {
-    swipeCount++;
-    if (swipeCount >= CTA_SWIPES) {
-      // Ambil cta dari video yang aktif saat ini, atau fallback ke video manapun yg punya cta
-      const ctaUrl = vlist[current]?.cta || vlist.find(v => v.cta)?.cta;
-      if (ctaUrl) {
-        ctaFired = true;
-        setTimeout(() => { window.location.href = ctaUrl; }, 400);
-      }
-    }
-  }
+  // Unlock cepat — preload sudah jalan, play hampir instant
+  // Spinner handle visual kalau masih buffering
+  setTimeout(() => { locked = false; }, 280);
 }
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
