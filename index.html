@@ -318,35 +318,29 @@ vlist.forEach((v, i) => {
 
   // Spinner saat buffering + stall watch
   vid.addEventListener('waiting',  () => {
-    if (i === current) {
-      spinner.classList.add('show');
-      startStallWatch(i); // mulai hitung stuck
-    }
+    if (i === current) { spinner.classList.add('show'); startStallWatch(i); }
   });
   vid.addEventListener('playing',  () => {
     spinner.classList.remove('show');
     playIcon.classList.remove('show'); // safety net
-    clearStall(); // video sudah jalan, batalkan stall timer
-    startStallWatch(i); // reset pantau untuk cycle berikutnya
+    clearStall(i);
+    startStallWatch(i); // reset watch untuk cycle berikutnya
   });
-  vid.addEventListener('canplay',  () => spinner.classList.remove('show'));
+  vid.addEventListener('canplay',  () => { spinner.classList.remove('show'); });
   vid.addEventListener('stalled',  () => {
-    if (i === current) {
-      spinner.classList.add('show');
-      startStallWatch(i);
-    }
+    if (i === current) { spinner.classList.add('show'); startStallWatch(i); }
   });
   vid.addEventListener('error', () => {
-    // Error network/src → coba load ulang sekali
     if (i !== current) return;
+    clearStall(i);
     spinner.classList.add('show');
-    const src = v.dataset.src || vid.src;
+    const src = vid.dataset.src || vid.src;
     setTimeout(() => {
       if (i !== current) return;
       vid.src = src;
       vid.muted = !interacted;
       vid.play().catch(() => { vid.muted = true; vid.play().catch(() => {}); });
-    }, 1000);
+    }, 1200);
   });
 
   // Auto next saat ended
@@ -408,51 +402,54 @@ function ensureSrc(i) {
 }
 
 // ── STALL RECOVERY ───────────────────────────────────────────────────────────
-// Kalau video stuck buffering > STALL_MS tanpa progress → reload src & retry play
-// Ini fix utama untuk blank video di Chrome Android
-const STALL_MS = 6000; // 6 detik tanpa progress = dianggap stuck
-let stallTimer = null;
+// Per-video stall timer — bukan shared, agar tidak saling cancel
+const stallTimers = new Array(total).fill(null);
+const STALL_MS    = 5000; // 5 detik tidak ada progress = stuck
 
-function clearStall() {
-  if (stallTimer) { clearTimeout(stallTimer); stallTimer = null; }
+function clearStall(i) {
+  if (stallTimers[i]) { clearTimeout(stallTimers[i]); stallTimers[i] = null; }
 }
 
 function startStallWatch(i) {
-  clearStall();
-  const v = getVid(i);
+  clearStall(i);
+  const v       = getVid(i);
   const spinner = slides[i].querySelector('.spinner');
-  let lastTime = v.currentTime;
+  const snapTime = v.currentTime;
 
-  stallTimer = setTimeout(() => {
-    // Cek apakah video masih di index yang sama dan masih stuck
-    if (i !== current) return;
-    if (!v.paused && v.currentTime === lastTime) {
-      // Stuck! — reload src dan play ulang
-      const src = v.src || v.dataset.src;
-      const pos  = v.currentTime;
-      spinner.classList.add('show');
+  stallTimers[i] = setTimeout(() => {
+    stallTimers[i] = null;
+    if (i !== current) return;        // user sudah pindah video, abaikan
+    if (v.paused)      return;        // user pause manual, abaikan
+    if (v.currentTime > snapTime + 0.1) return; // ada progress, tidak stuck
 
-      v.src = ''; // reset dulu
-      v.load();
+    // STUCK — reload dan play ulang dari posisi terakhir
+    const src = v.src;
+    const pos  = v.currentTime;
+    spinner.classList.add('show');
 
-      // Beri jeda lalu set src lagi
-      setTimeout(() => {
-        if (i !== current) return; // user sudah swipe, batalkan
-        v.src = src;
-        v.muted = !interacted;
+    v.src = '';
+    v.load(); // paksa browser lepaskan buffer lama
+
+    setTimeout(() => {
+      if (i !== current) return;
+      v.src = src;
+      v.muted = !interacted;
+      // Seek ke posisi terakhir setelah metadata loaded
+      v.addEventListener('loadedmetadata', function onMeta() {
+        v.removeEventListener('loadedmetadata', onMeta);
+        if (pos > 0 && pos < v.duration - 0.5) v.currentTime = pos;
         v.play().catch(() => { v.muted = true; v.play().catch(() => {}); });
-      }, 300);
-    }
+      }, { once: true });
+    }, 400);
   }, STALL_MS);
 }
 
 // ── PLAY ─────────────────────────────────────────────────────────────────────
 function playVid(i) {
-  const v = getVid(i);
+  const v       = getVid(i);
   const spinner = slides[i].querySelector('.spinner');
 
   slides[i].querySelector('.play-icon').classList.remove('show');
-
   v.muted = !interacted;
 
   if (finished[i]) {
@@ -461,11 +458,34 @@ function playVid(i) {
     slides[i].querySelector('.prog-fill').style.width = '0%';
   }
 
-  // Kalau src belum ada sama sekali (harusnya sudah via ensureSrc, tapi safety)
-  if (!v.src && v.dataset.src) {
-    v.src = v.dataset.src;
+  // Pastikan src sudah ada
+  if (!v.src && v.dataset.src) v.src = v.dataset.src;
+
+  // FIX UTAMA: Beberapa browser (Firefox, Samsung Internet, iOS Safari lama)
+  // tidak mulai download meski src sudah di-set tanpa load() dipanggil.
+  // Panggil load() HANYA kalau readyState 0 (belum ada data sama sekali).
+  // Kalau readyState >= 1, browser sudah punya metadata → langsung play lebih cepat.
+  if (v.readyState === 0) {
+    v.load();
+    // Tunggu minimal data lalu play
+    v.addEventListener('loadedmetadata', function onReady() {
+      v.removeEventListener('loadedmetadata', onReady);
+      if (i !== current) return; // user sudah swipe, batalkan
+      v.play().catch(() => { v.muted = true; v.play().catch(() => {}); });
+      startStallWatch(i);
+    }, { once: true });
+
+    // Safety timeout: kalau loadedmetadata tidak fire dalam 8 detik → tetap coba play
+    setTimeout(() => {
+      if (i !== current || !v.paused) return;
+      v.play().catch(() => { v.muted = true; v.play().catch(() => {}); });
+    }, 8000);
+
+    spinner.classList.add('show'); // tunjukkan spinner saat loading awal
+    return;
   }
 
+  // readyState >= 1 — langsung play, browser sudah punya cukup data
   const p = v.play();
   if (p && p.catch) {
     p.catch(() => {
@@ -474,23 +494,43 @@ function playVid(i) {
     });
   }
 
-  // Mulai pantau stall setelah play
   startStallWatch(i);
 }
 
+// Bebaskan memory video yang tidak aktif dan jauh dari current
+// (lebih dari 2 posisi di depan/belakang → unload)
+function unloadFarVideos(currentIdx) {
+  slides.forEach((s, i) => {
+    const dist = Math.min(
+      Math.abs(i - currentIdx),
+      total - Math.abs(i - currentIdx) // jarak memutar
+    );
+    if (dist > 2) {
+      const v = s.querySelector('video');
+      if (v.src && !v.paused) v.pause();
+      if (v.src) {
+        v.dataset.src = v.src; // simpan src sebelum dihapus
+        v.removeAttribute('src');
+        v.load(); // bebaskan buffer
+      }
+    }
+  });
+}
+
 // ── NAVIGATE ─────────────────────────────────────────────────────────────────
-// isUserSwipe: true = swipe manual user, false = auto (ended/logo)
 function goTo(next, force, isUserSwipe) {
   if (locked && !force) return;
   if (next === current && !force) return;
 
   locked = true;
 
-  // Hentikan stall watch video lama
-  clearStall();
+  const prev = current;
 
-  // Sembunyikan play icon di slide yang akan ditinggalkan
-  slides[current].querySelector('.play-icon').classList.remove('show');
+  // Stop stall watch video lama
+  clearStall(prev);
+
+  // Sembunyikan play icon di slide yang ditinggalkan
+  slides[prev].querySelector('.play-icon').classList.remove('show');
 
   // Pause & hide semua slide lain
   slides.forEach((s, i) => {
@@ -507,13 +547,14 @@ function goTo(next, force, isUserSwipe) {
   // Update dots
   dotsEl.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i === current));
 
-  // Lazy load current + 1 ke depan saja
-  // Preload 2+ di mobile justru bikin browser throttle semua → blank
+  // Preload hanya 1 ke depan — lebih banyak justru throttle browser mobile
   ensureSrc(current);
   ensureSrc((current + 1) % total);
 
+  // Bebaskan memory video yang jauh
+  unloadFarVideos(current);
+
   if (current === 0 && !interacted) {
-    // Belum ada interaksi sama sekali → tampilkan ▶, jangan autoplay
     const pi = slides[0].querySelector('.play-icon');
     pi.textContent = '▶';
     pi.classList.add('show');
@@ -521,17 +562,16 @@ function goTo(next, force, isUserSwipe) {
     return;
   }
 
-  playVid(current); // sudah include hide icon di dalamnya
+  playVid(current);
   setTimeout(() => { locked = false; }, 280);
 
-  // ── CTA: hitung swipe MANUAL saja, redirect 1x setelah CTA_SWIPES ──
+  // CTA — hanya swipe manual
   if (!ctaFired && isUserSwipe) {
     swipeCount++;
     if (swipeCount >= CTA_SWIPES) {
       const ctaUrl = vlist[current]?.cta || vlist.find(v => v.cta)?.cta;
       if (ctaUrl) {
         ctaFired = true;
-        // Buka di tab baru agar user tidak kehilangan halaman
         setTimeout(() => { window.open(ctaUrl, '_blank'); }, 400);
       }
     }
