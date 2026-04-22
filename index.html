@@ -316,14 +316,38 @@ vlist.forEach((v, i) => {
     }
   });
 
-  // Spinner saat buffering
-  vid.addEventListener('waiting',  () => { if (i === current) spinner.classList.add('show'); });
+  // Spinner saat buffering + stall watch
+  vid.addEventListener('waiting',  () => {
+    if (i === current) {
+      spinner.classList.add('show');
+      startStallWatch(i); // mulai hitung stuck
+    }
+  });
   vid.addEventListener('playing',  () => {
     spinner.classList.remove('show');
     playIcon.classList.remove('show'); // safety net
+    clearStall(); // video sudah jalan, batalkan stall timer
+    startStallWatch(i); // reset pantau untuk cycle berikutnya
   });
   vid.addEventListener('canplay',  () => spinner.classList.remove('show'));
-  vid.addEventListener('stalled',  () => { if (i === current) spinner.classList.add('show'); });
+  vid.addEventListener('stalled',  () => {
+    if (i === current) {
+      spinner.classList.add('show');
+      startStallWatch(i);
+    }
+  });
+  vid.addEventListener('error', () => {
+    // Error network/src → coba load ulang sekali
+    if (i !== current) return;
+    spinner.classList.add('show');
+    const src = v.dataset.src || vid.src;
+    setTimeout(() => {
+      if (i !== current) return;
+      vid.src = src;
+      vid.muted = !interacted;
+      vid.play().catch(() => { vid.muted = true; vid.play().catch(() => {}); });
+    }, 1000);
+  });
 
   // Auto next saat ended
   vid.addEventListener('ended', () => {
@@ -383,16 +407,50 @@ function ensureSrc(i) {
   if (!v.src && v.dataset.src) v.src = v.dataset.src;
 }
 
+// ── STALL RECOVERY ───────────────────────────────────────────────────────────
+// Kalau video stuck buffering > STALL_MS tanpa progress → reload src & retry play
+// Ini fix utama untuk blank video di Chrome Android
+const STALL_MS = 6000; // 6 detik tanpa progress = dianggap stuck
+let stallTimer = null;
+
+function clearStall() {
+  if (stallTimer) { clearTimeout(stallTimer); stallTimer = null; }
+}
+
+function startStallWatch(i) {
+  clearStall();
+  const v = getVid(i);
+  const spinner = slides[i].querySelector('.spinner');
+  let lastTime = v.currentTime;
+
+  stallTimer = setTimeout(() => {
+    // Cek apakah video masih di index yang sama dan masih stuck
+    if (i !== current) return;
+    if (!v.paused && v.currentTime === lastTime) {
+      // Stuck! — reload src dan play ulang
+      const src = v.src || v.dataset.src;
+      const pos  = v.currentTime;
+      spinner.classList.add('show');
+
+      v.src = ''; // reset dulu
+      v.load();
+
+      // Beri jeda lalu set src lagi
+      setTimeout(() => {
+        if (i !== current) return; // user sudah swipe, batalkan
+        v.src = src;
+        v.muted = !interacted;
+        v.play().catch(() => { v.muted = true; v.play().catch(() => {}); });
+      }, 300);
+    }
+  }, STALL_MS);
+}
+
 // ── PLAY ─────────────────────────────────────────────────────────────────────
-// KEY INSIGHT: Jangan tunggu canplay/readyState.
-// - ensureSrc() dipanggil 2 video sebelumnya → browser sudah buffering
-// - play() langsung → kalau belum siap, browser buffer dulu (spinner handle visual)
-// - Ini jauh lebih cepat vs nunggu canplay yang bisa stuck
 function playVid(i) {
   const v = getVid(i);
+  const spinner = slides[i].querySelector('.spinner');
 
-  // Langsung sembunyikan icon saat video mau diputar
-  // Tidak andalkan event 'playing' karena Chrome Android kadang skip
   slides[i].querySelector('.play-icon').classList.remove('show');
 
   v.muted = !interacted;
@@ -403,6 +461,11 @@ function playVid(i) {
     slides[i].querySelector('.prog-fill').style.width = '0%';
   }
 
+  // Kalau src belum ada sama sekali (harusnya sudah via ensureSrc, tapi safety)
+  if (!v.src && v.dataset.src) {
+    v.src = v.dataset.src;
+  }
+
   const p = v.play();
   if (p && p.catch) {
     p.catch(() => {
@@ -410,6 +473,9 @@ function playVid(i) {
       v.play().catch(() => {});
     });
   }
+
+  // Mulai pantau stall setelah play
+  startStallWatch(i);
 }
 
 // ── NAVIGATE ─────────────────────────────────────────────────────────────────
@@ -419,6 +485,9 @@ function goTo(next, force, isUserSwipe) {
   if (next === current && !force) return;
 
   locked = true;
+
+  // Hentikan stall watch video lama
+  clearStall();
 
   // Sembunyikan play icon di slide yang akan ditinggalkan
   slides[current].querySelector('.play-icon').classList.remove('show');
@@ -438,10 +507,10 @@ function goTo(next, force, isUserSwipe) {
   // Update dots
   dotsEl.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i === current));
 
-  // Lazy load current + 2 ke depan
+  // Lazy load current + 1 ke depan saja
+  // Preload 2+ di mobile justru bikin browser throttle semua → blank
   ensureSrc(current);
   ensureSrc((current + 1) % total);
-  ensureSrc((current + 2) % total);
 
   if (current === 0 && !interacted) {
     // Belum ada interaksi sama sekali → tampilkan ▶, jangan autoplay
@@ -471,8 +540,7 @@ function goTo(next, force, isUserSwipe) {
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
 slides[0].classList.add('active');
-ensureSrc(1);
-ensureSrc(2);
+ensureSrc(1); // preload 1 saja
 
 const pi0 = slides[0].querySelector('.play-icon');
 pi0.textContent = '▶';
@@ -563,5 +631,4 @@ document.getElementById('logoHome').addEventListener('click', (e) => {
 });
 </script>
 </body>
-  </html>
-  
+</html>
