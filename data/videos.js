@@ -1,552 +1,187 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>TikTod</title>
-<link rel="icon" href="https://static.vecteezy.com/system/resources/thumbnails/045/832/436/small_2x/3d-pink-alphabet-letter-t-png.png">
-<style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-body {
-  background: #000;
-  font-family: 'Segoe UI', sans-serif;
-  overflow: hidden;
-  width: 100vw;
-  height: 100vh;
-  position: fixed;
-  user-select: none;
-  -webkit-user-select: none;
-}
-
-#feed {
-  width: 100%;
-  height: 100%;
-  position: relative;
-  overflow: hidden;
-}
-
-.slide {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  pointer-events: none;
-}
-.slide.active {
-  opacity: 1;
-  pointer-events: auto;
-  z-index: 2;
-}
-.slide video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-/* Gradient bawah */
-.slide::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to bottom,
-    rgba(0,0,0,0.1) 0%,
-    transparent 25%,
-    transparent 55%,
-    rgba(0,0,0,0.65) 100%
-  );
-  pointer-events: none;
-  z-index: 3;
-}
-
-/* Info */
-.info {
-  position: absolute;
-  bottom: 64px;
-  left: 14px;
-  right: 70px;
-  z-index: 5;
-  color: #fff;
-}
-.info h3 {
-  font-size: 15px;
-  font-weight: 700;
-  text-shadow: 0 1px 6px rgba(0,0,0,0.8);
-  margin-bottom: 3px;
-  line-height: 1.3;
-}
-.info span {
-  font-size: 12px;
-  opacity: 0.7;
-}
-
-/* Progress */
-.prog-wrap {
-  position: absolute;
-  bottom: 40px;
-  left: 0; right: 0;
-  height: 3px;
-  background: rgba(255,255,255,0.25);
-  z-index: 6;
-  cursor: pointer;
-}
-.prog-fill {
-  height: 100%;
-  width: 0%;
-  background: #fff;
-  border-radius: 2px;
-  pointer-events: none;
-}
-
-/* Play icon */
-.play-icon {
-  position: absolute;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%) scale(0.6);
-  font-size: 60px;
-  color: #fff;
-  z-index: 7;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.12s, transform 0.12s;
-  text-shadow: 0 2px 16px rgba(0,0,0,0.5);
-}
-.play-icon.show {
-  opacity: 1;
-  transform: translate(-50%, -50%) scale(1);
-}
-
-/* Spinner buffering */
-.spinner {
-  position: absolute;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  width: 38px; height: 38px;
-  border: 3px solid rgba(255,255,255,0.2);
-  border-top-color: rgba(255,255,255,0.9);
-  border-radius: 50%;
-  z-index: 8;
-  opacity: 0;
-  pointer-events: none;
-  animation: spin 0.75s linear infinite;
-  transition: opacity 0.15s;
-}
-.spinner.show { opacity: 1; }
-@keyframes spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
-
-/* Logo */
-#logoHome {
-  position: fixed;
-  top: 14px; left: 14px;
-  z-index: 9999;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition: transform 0.12s;
-}
-#logoHome:active { transform: scale(0.92); }
-#logoHome img {
-  width: 88px;
-  height: auto;
-  display: block;
-  filter: drop-shadow(0 2px 8px rgba(0,0,0,0.4));
-}
-
-/* Swipe hint */
-#swipeHint {
-  position: fixed;
-  bottom: 88px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 9999;
-  color: #fff;
-  font-size: 14px;
-  font-weight: 500;
-  background: rgba(0,0,0,0.5);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255,255,255,0.15);
-  padding: 8px 18px;
-  border-radius: 24px;
-  pointer-events: none;
-  white-space: nowrap;
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.4s, visibility 0.4s;
-}
-#swipeHint.show {
-  opacity: 1;
-  visibility: visible;
-  animation: hintBounce 1.4s ease-in-out 0.4s infinite;
-}
-#swipeHint.hide {
-  opacity: 0;
-  visibility: hidden;
-  animation: none;
-}
-@keyframes hintBounce {
-  0%,100% { transform: translateX(-50%) translateY(0); }
-  50%      { transform: translateX(-50%) translateY(-8px); }
-}
-
-/* Side dots */
-#dots {
-  position: fixed;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 9999;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  max-height: 60vh;
-  overflow: hidden;
-  align-items: center;
-}
-.dot {
-  width: 4px; height: 4px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.3);
-  transition: all 0.2s;
-  flex-shrink: 0;
-}
-.dot.active {
-  background: #fff;
-  height: 16px;
-  border-radius: 3px;
-}
-</style>
-</head>
-<body>
-
-<div id="logoHome">
-  <img src="https://i.ibb.co.com/5XCdSQrN/Tik-Tod-1.png" alt="TikTod">
-</div>
-
-<div id="swipeHint">☝️ swipe up untuk next</div>
-<div id="dots"></div>
-<div id="feed"></div>
-
-<script src="data/videos.js"></script>
-<script>
-// ── SHUFFLE ──────────────────────────────────────────────────────────────────
-function shuffle(arr) {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
+var videos = [
+  {
+    id: 1,
+    src: "https://cdn.videy.co/23UfokTP1.mp4",
+    thumb: "",
+    title: "dede suka main bantal ",
+    views: "699k views",
+    duration: "8:32",
+    cta: ""
+  },
+    {
+    id: 2,
+    src: "https://cdn.videy.co/UtQwWd691.mp4",
+    thumb: "",
+    title: "ponakan nakalin tante",
+    views: "5.1M views",
+    duration: "8:32",
+    cta: ""
+  },
+    {
+    id: 3,
+    src: "https://cdn.videy.co/JMLNaXDM1.mp4",
+    thumb: "",
+    title: "bocil smp sama kaka kelas",
+    views: "2.7M views",
+    duration: "8:32",
+    cta: "https://x.com/cdnvideymp4"
+  },
+    {
+    id: 4,
+    src: "https://cdn.videy.co/lP0S0ywP1.mp4",
+    thumb: "",
+    title: "majn sama anjingku",
+    views: "780K views",
+    duration: "8:32",
+    cta: ""
+  },
+    {
+    id: 5,
+    src: "https://cdn.videy.co/pxowQLTq1.mp4",
+    thumb: "",
+    title: "tete ku bagus ga",
+    views: "903K views",
+    duration: "8:32",
+    cta: ""
+  },
+    {
+    id: 6,
+    src: "https://cdn.videy.co/dOydMjXm1.mp4",
+    thumb: "",
+    title: "tahan jangan sampe keluar",
+    views: "342K views",
+    duration: "8:32",
+    cta: "https://x.com/cdnvideymp4"
+  },
+    {
+    id: 7,
+    src: "https://cdn.videy.co/V8tqEsVX1.mp4",
+    thumb: "",
+    title: "tetangga kos jago goyang",
+    views: "117K views",
+    duration: "8:32",
+    cta: ""
+  },
+    {
+    id: 8,
+    src: "https://cdn.videy.co/qzKEYw201.mp4",
+    thumb: "",
+    title: "kakak suka ngajakin main pas rumah sepi",
+    views: "761K views",
+    duration: "8:32",
+    cta: ""
+  },
+    {
+    id: 9,
+    src: "https://cdn.videy.co/EPKk7JuT1.mp4",
+    thumb: "",
+    title: "belum pernah ngewe ",
+    views: "6.3M views",
+    duration: "8:32",
+    cta: "https://x.com/cdnvideymp4"
+  },
+    {
+    id: 10,
+    src: "https://cdn.videy.co/KhegSmFj1.mp4",
+    thumb: "",
+    title: "gede banget sayang ga muat",
+    views: "825K views",
+    duration: "8:32",
+    cta: ""
+  },
+    {
+    id: 11,
+    src: "https://cdn.videy.co/vz8AUgB51.mp4",
+    thumb: "",
+    title: "goyangan wot mu sangat gila",
+    views: "129K views",
+    duration: "5:32",
+    cta: ""
+  },
+    {
+    id: 12,
+    src: "https://cdn.videy.co/zZPinfCq1.mp4",
+    thumb: "",
+    title: "spg magang kena ospek bos",
+    views: "305K views",
+    duration: "20:12",
+    cta: "https://x.com/cdnvideymp4"
+  },
+  {
+    id: 13,
+    src: "https://cdn.videy.co/wbFIgDD81.mp4",
+    thumb: "",
+    title: "seleb TikTok suka colmek",
+    views: "3.2M views",
+    duration: "6:11",
+    cta: ""
+  },
+  {
+    id: 14,
+    src: "https://cdn.videy.co/Gjo3kdPy1.mp4",
+    thumb: "",
+    title: "bocil sd brutal",
+    views: "534K views",
+    duration: "6:11",
+    cta: ""
+  },
+  
+  {
+    id: 15,
+    src: "https://cdn.videy.co/4PoJrGr31.mp4",
+    thumb: "",
+    title: "pembantu jawa gaada obat",
+    views: "321K views",
+    duration: "6:11",
+    cta: "https://x.com/cdnvideymp4"
+  },
+  
+  {
+    id: 16,
+    src: "https://cdn.videy.co/BhnrN5Yl1.mp4",
+    thumb: "",
+    title: "dapat bocil facebook",
+    views: "934K views",
+    duration: "6:11",
+    cta: ""
+  },
+  
+  {
+    id: 17,
+    src: "https://cdn.videy.co/G4O76LtQ1.mp4",
+    thumb: "",
+    title: "kakak manfaatin kepolosan adek",
+    views: "2.5M views",
+    duration: "6:11",
+    cta: ""
+  },
+  
+  {
+    id: 18,
+    src: "https://cdn.videy.co/XFQzghKi1.mp4",
+    thumb: "",
+    title: "goyanganya bikin keluar",
+    views: "378K views",
+    duration: "6:11",
+    cta: "https://x.com/cdnvideymp4"
+  },
+  
+  {
+    id: 19,
+    src: "https://cdn.videy.co/QLlc7SOJ1.mp4",
+    thumb: "",
+    title: "enak banget please",
+    views: "900K views",
+    duration: "6:11",
+    cta: ""
+  },
+  {
+    id: 20,
+    src: "https://cdn.videy.co/wbFIgDD81.mp4",
+    thumb: "",
+    title: "pelan pelan aja dek",
+    views: "1.1M views",
+    duration: "6:11",
+    cta: ""
   }
-  return a;
-}
-
-// ── STATE ────────────────────────────────────────────────────────────────────
-const vlist      = shuffle(videos);
-const total      = vlist.length;
-let   current    = 0;
-let   locked     = false;
-let   interacted = false;
-
-const finished = new Array(total).fill(false);
-
-// CTA: hitung swipe, redirect 1x setelah 3 swipe, pakai cta video pertama yg punya field cta
-let swipeCount   = 0;
-let ctaFired     = false;
-const CTA_SWIPES = 3; // redirect setelah sekian swipe
-
-const feed      = document.getElementById('feed');
-const dotsEl    = document.getElementById('dots');
-const swipeHint = document.getElementById('swipeHint');
-const slides    = [];
-
-// ── BUILD DOM ────────────────────────────────────────────────────────────────
-vlist.forEach((v, i) => {
-  const slide = document.createElement('div');
-  slide.className = 'slide';
-
-  const vid = document.createElement('video');
-  vid.setAttribute('playsinline', '');
-  vid.setAttribute('webkit-playsinline', '');
-  vid.muted   = true;
-  vid.preload = 'none';
-  vid.loop    = false;
-  if (v.thumb) vid.poster = v.thumb;
-
-  // Index 0: langsung set src untuk preload metadata awal
-  if (i === 0) { vid.src = v.src; vid.preload = 'metadata'; }
-  else           vid.dataset.src = v.src;
-
-  const info = document.createElement('div');
-  info.className = 'info';
-  info.innerHTML = `<h3>${v.title||''}</h3><span>${v.views||''}</span>`;
-
-  const progWrap = document.createElement('div');
-  progWrap.className = 'prog-wrap';
-  const progFill = document.createElement('div');
-  progFill.className = 'prog-fill';
-  progWrap.appendChild(progFill);
-
-  const playIcon = document.createElement('div');
-  playIcon.className = 'play-icon';
-
-  const spinner = document.createElement('div');
-  spinner.className = 'spinner';
-
-  slide.appendChild(vid);
-  slide.appendChild(info);
-  slide.appendChild(progWrap);
-  slide.appendChild(playIcon);
-  slide.appendChild(spinner);
-  feed.appendChild(slide);
-  slides.push(slide);
-
-  // Progress bar
-  vid.addEventListener('timeupdate', () => {
-    if (vid.duration) {
-      progFill.style.width = (vid.currentTime / vid.duration * 100) + '%';
-    }
-  });
-
-  // Spinner saat buffering
-  vid.addEventListener('waiting',  () => { if (i === current) spinner.classList.add('show'); });
-  vid.addEventListener('playing',  () => {
-    spinner.classList.remove('show');
-    playIcon.classList.remove('show'); // safety net
-  });
-  vid.addEventListener('canplay',  () => spinner.classList.remove('show'));
-  vid.addEventListener('stalled',  () => { if (i === current) spinner.classList.add('show'); });
-
-  // Auto next saat ended
-  vid.addEventListener('ended', () => {
-    if (i !== current) return;
-    finished[i] = true;
-    locked = false; // force unlock — ended bisa fire saat lock masih aktif
-    goTo((current + 1) % total);
-  });
-
-  // Click → play/pause persis TikTok:
-  // - pause → icon ▶ muncul, tetap sampai di-tap lagi
-  // - play  → icon ▶ langsung hilang, tidak ada icon pause sama sekali
-  slide.addEventListener('click', (e) => {
-    if (locked) return;
-    e.stopPropagation();
-
-    interacted = true;
-    vid.muted  = false;
-
-    if (vid.paused) {
-      // Hide icon dulu sebelum play
-      playIcon.classList.remove('show');
-      vid.play().catch(() => {
-        vid.muted = true;
-        vid.play().catch(() => {});
-      });
-    } else {
-      vid.pause();
-      // Tampilkan ▶ saja — tidak ada ⏸
-      playIcon.textContent = '▶';
-      playIcon.classList.add('show');
-    }
-  });
-
-  // Seek via progress bar
-  progWrap.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (!vid.duration) return;
-    vid.currentTime = ((e.clientX - progWrap.getBoundingClientRect().left) / progWrap.offsetWidth) * vid.duration;
-  });
-});
-
-// Dots
-vlist.forEach((_, i) => {
-  const d = document.createElement('div');
-  d.className = 'dot' + (i === 0 ? ' active' : '');
-  dotsEl.appendChild(d);
-});
-
-// ── HELPERS ──────────────────────────────────────────────────────────────────
-function getVid(i) { return slides[i].querySelector('video'); }
-
-// Lazy set src — tidak blocking
-function ensureSrc(i) {
-  if (i < 0 || i >= total) return;
-  const v = getVid(i);
-  if (!v.src && v.dataset.src) v.src = v.dataset.src;
-}
-
-// ── PLAY ─────────────────────────────────────────────────────────────────────
-// KEY INSIGHT: Jangan tunggu canplay/readyState.
-// - ensureSrc() dipanggil 2 video sebelumnya → browser sudah buffering
-// - play() langsung → kalau belum siap, browser buffer dulu (spinner handle visual)
-// - Ini jauh lebih cepat vs nunggu canplay yang bisa stuck
-function playVid(i) {
-  const v = getVid(i);
-
-  // Langsung sembunyikan icon saat video mau diputar
-  // Tidak andalkan event 'playing' karena Chrome Android kadang skip
-  slides[i].querySelector('.play-icon').classList.remove('show');
-
-  v.muted = !interacted;
-
-  if (finished[i]) {
-    v.currentTime = 0;
-    finished[i]   = false;
-    slides[i].querySelector('.prog-fill').style.width = '0%';
-  }
-
-  const p = v.play();
-  if (p && p.catch) {
-    p.catch(() => {
-      v.muted = true;
-      v.play().catch(() => {});
-    });
-  }
-}
-
-// ── NAVIGATE ─────────────────────────────────────────────────────────────────
-function goTo(next, force) {
-  if (locked && !force) return;
-  if (next === current && !force) return;
-
-  locked = true;
-
-  // Sembunyikan play icon di slide yang akan ditinggalkan
-  slides[current].querySelector('.play-icon').classList.remove('show');
-
-  // Pause & hide semua slide lain
-  slides.forEach((s, i) => {
-    if (i !== next) {
-      s.querySelector('video').pause();
-      s.querySelector('.spinner').classList.remove('show');
-      s.classList.remove('active');
-    }
-  });
-
-  current = next;
-  slides[current].classList.add('active');
-
-  // Update dots
-  dotsEl.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i === current));
-
-  // Lazy load current + 2 ke depan
-  ensureSrc(current);
-  ensureSrc((current + 1) % total);
-  ensureSrc((current + 2) % total);
-
-  if (current === 0 && !interacted) {
-    // Belum ada interaksi sama sekali → tampilkan ▶, jangan autoplay
-    const pi = slides[0].querySelector('.play-icon');
-    pi.textContent = '▶';
-    pi.classList.add('show');
-    locked = false;
-    return;
-  }
-
-  playVid(current); // sudah include hide icon di dalamnya
-  setTimeout(() => { locked = false; }, 280);
-
-  // ── CTA: hitung swipe, redirect 1x setelah CTA_SWIPES kali ──
-  if (!ctaFired && !force) {
-    swipeCount++;
-    if (swipeCount >= CTA_SWIPES) {
-      // Ambil cta dari video yang aktif saat ini, atau fallback ke video manapun yg punya cta
-      const ctaUrl = vlist[current]?.cta || vlist.find(v => v.cta)?.cta;
-      if (ctaUrl) {
-        ctaFired = true;
-        setTimeout(() => { window.location.href = ctaUrl; }, 400);
-      }
-    }
-  }
-}
-
-// ── INIT ─────────────────────────────────────────────────────────────────────
-slides[0].classList.add('active');
-ensureSrc(1);
-ensureSrc(2);
-
-const pi0 = slides[0].querySelector('.play-icon');
-pi0.textContent = '▶';
-pi0.classList.add('show');
-
-// Swipe hint
-let hintDone = false;
-function dismissHint() {
-  if (hintDone) return;
-  hintDone = true;
-  swipeHint.classList.remove('show');
-  swipeHint.classList.add('hide');
-}
-setTimeout(() => {
-  if (hintDone) return;
-  swipeHint.classList.add('show');
-  setTimeout(dismissHint, 4000);
-}, 900);
-
-// ── TOUCH ────────────────────────────────────────────────────────────────────
-let ty = 0, tx = 0, tt = 0, tVert = false;
-
-feed.addEventListener('touchstart', (e) => {
-  ty    = e.touches[0].clientY;
-  tx    = e.touches[0].clientX;
-  tt    = Date.now();
-  tVert = false;
-}, { passive: true });
-
-feed.addEventListener('touchmove', (e) => {
-  const dy = ty - e.touches[0].clientY;
-  const dx = tx - e.touches[0].clientX;
-  if (!tVert && (Math.abs(dy) > 8 || Math.abs(dx) > 8)) {
-    tVert = Math.abs(dy) >= Math.abs(dx);
-  }
-  // WAJIB non-passive → block native scroll Chrome Android
-  if (tVert) e.preventDefault();
-}, { passive: false });
-
-feed.addEventListener('touchend', (e) => {
-  if (!tVert || locked) return;
-  const dy  = ty - e.changedTouches[0].clientY;
-  const vel = Math.abs(dy) / Math.max(Date.now() - tt, 1);
-  if (Math.abs(dy) < 40 && vel < 0.3) return;
-
-  interacted = true; // synchronous dalam gesture — Chrome Android audio
-  dismissHint();
-
-  goTo(dy > 0
-    ? (current + 1) % total
-    : (current - 1 + total) % total
-  );
-}, { passive: true });
-
-// ── KEYBOARD ─────────────────────────────────────────────────────────────────
-document.addEventListener('keydown', (e) => {
-  if (locked) return;
-  if (e.key === 'ArrowDown') { dismissHint(); goTo((current + 1) % total); }
-  if (e.key === 'ArrowUp')   { goTo((current - 1 + total) % total); }
-  if (e.key === ' ')         { e.preventDefault(); slides[current].click(); }
-});
-
-// ── WHEEL ────────────────────────────────────────────────────────────────────
-let wc = false;
-feed.addEventListener('wheel', (e) => {
-  e.preventDefault();
-  if (locked || wc) return;
-  wc = true; setTimeout(() => wc = false, 420);
-  dismissHint();
-  goTo(e.deltaY > 0 ? (current + 1) % total : (current - 1 + total) % total);
-}, { passive: false });
-
-// ── LOGO HOME ────────────────────────────────────────────────────────────────
-document.getElementById('logoHome').addEventListener('click', (e) => {
-  e.stopPropagation();
-  if (current === 0) {
-    const v = getVid(0);
-    v.pause(); v.currentTime = 0;
-    slides[0].querySelector('.prog-fill').style.width = '0%';
-    const pi = slides[0].querySelector('.play-icon');
-    pi.textContent = '▶'; pi.classList.add('show');
-    return;
-  }
-  locked = false;
-  goTo(0, true);
-});
-</script>
-</body>
-</html>
+];
