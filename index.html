@@ -368,12 +368,10 @@ videoList.forEach((v, i) => {
   });
 
   // Video ended → auto next
-  // (loop=true sudah handle loop di video terakhir, tapi kalau mau next bisa override)
-  // Karena loop=true, "ended" tidak akan fire. Kita handle loop manual agar
-  // video terakhir bisa lanjut ke video pertama.
-  vid.loop = false;
+  // PENTING: bypass locked karena ended bisa fire saat lock dari swipe belum selesai
   vid.addEventListener('ended', () => {
-    if (i !== current) return;
+    if (i !== current) return; // abaikan video yang bukan aktif
+    locked = false; // force unlock dulu
     navigateTo((current + 1) % total);
   });
 
@@ -382,17 +380,12 @@ videoList.forEach((v, i) => {
     if (locked) return;
     e.stopPropagation();
 
-    // Set interacted & unmute SYNCHRONOUS di dalam user gesture
-    // Chrome Android wajib ini — jangan taruh setelah await/Promise
+    // Set interacted SYNCHRONOUS dalam user gesture (Chrome Android audio policy)
     interacted = true;
-    vid.muted = false;
 
     if (vid.paused) {
-      vid.play().catch(() => {
-        // Kalau masih gagal (misal sebelum ada interaksi apapun), coba muted
-        vid.muted = true;
-        vid.play().catch(() => {});
-      });
+      // Play dengan audio — safePlay handle semua edge case
+      safePlay(vid, true);
       playIcon.textContent = '▶';
       flashIcon(playIcon);
     } else {
@@ -433,11 +426,14 @@ function getVideo(index) {
   return slides[index].querySelector('video');
 }
 
+// Lazy load src — kembalikan Promise yang resolve saat video siap di-play
 function loadVideo(index) {
   const vid = getVideo(index);
+  // Kalau src belum di-set, set sekarang
   if (!vid.src && vid.dataset.src) {
     vid.src = vid.dataset.src;
   }
+  return vid;
 }
 
 function flashIcon(icon) {
@@ -446,19 +442,67 @@ function flashIcon(icon) {
   icon._timer = setTimeout(() => icon.classList.remove('show'), 900);
 }
 
+// Tunggu video siap di-play (readyState >= 3 = HAVE_FUTURE_DATA)
+// Dengan timeout safety agar tidak stuck selamanya
+function waitReady(vid, timeout = 4000) {
+  return new Promise((resolve) => {
+    if (vid.readyState >= 3) { resolve(); return; }
+    const onReady = () => { cleanup(); resolve(); };
+    const timer   = setTimeout(() => { cleanup(); resolve(); }, timeout);
+    function cleanup() {
+      vid.removeEventListener('canplay', onReady);
+      vid.removeEventListener('error',   onReady);
+      clearTimeout(timer);
+    }
+    vid.addEventListener('canplay', onReady, { once: true });
+    vid.addEventListener('error',   onReady, { once: true }); // error pun resolve agar tidak stuck
+  });
+}
+
+// Fungsi play yang aman — handle semua edge case Chrome Android
+async function safePlay(vid, withAudio) {
+  // Reset ke awal hanya kalau video sudah loaded (bukan saat baru lazy-load)
+  // Bug lama: currentTime = 0 saat readyState = 0 throw error silent
+  if (vid.readyState >= 1) {
+    vid.currentTime = 0;
+  }
+
+  // Set muted SYNCHRONOUS sebelum play (wajib Chrome Android audio policy)
+  vid.muted = !withAudio;
+
+  // Tunggu video siap
+  await waitReady(vid);
+
+  // Reset lagi setelah load kalau tadi readyState masih 0
+  if (vid.currentTime !== 0) vid.currentTime = 0;
+
+  try {
+    await vid.play();
+  } catch (err) {
+    // Kalau gagal dengan audio → fallback muted
+    if (!vid.muted) {
+      vid.muted = true;
+      try { await vid.play(); } catch (_) { /* benar-benar gagal, biarkan */ }
+    }
+  }
+}
+
 function navigateTo(nextIndex, instant = false) {
   if (locked && !instant) return;
   if (nextIndex === current && !instant) return;
 
   locked = true;
 
-  const prevIndex = current;
+  // Safety: pastikan unlock terjadi meski ada error tak terduga
+  const unlockTimer = setTimeout(() => { locked = false; }, 1500);
+
   current = nextIndex;
 
   // Pause & deaktifkan semua slide lain
   slides.forEach((s, i) => {
     if (i !== current) {
-      s.querySelector('video').pause();
+      const v = s.querySelector('video');
+      v.pause();
       s.classList.remove('active');
     }
   });
@@ -472,39 +516,25 @@ function navigateTo(nextIndex, instant = false) {
     d.classList.toggle('active', i === current);
   });
 
-  // Load src jika belum (lazy)
-  loadVideo(current);
-
-  // Preload video berikutnya
-  loadVideo((current + 1) % total);
-
-  const vid = getVideo(current);
-  vid.currentTime = 0;
+  // Lazy load current + preload next
+  const vid = loadVideo(current);
+  loadVideo((current + 1) % total); // preload, tidak perlu tunggu
 
   if (current === 0 && !interacted) {
-    // Video pertama sebelum ada interaksi → jangan autoplay, tampilkan play icon
+    // Video pertama sebelum interaksi → tunjukkan play icon, jangan autoplay
     const pi = nextSlide.querySelector('.play-icon');
     pi.textContent = '▶';
     pi.classList.add('show');
+    clearTimeout(unlockTimer);
+    locked = false;
   } else {
-    // KRITIS untuk Chrome Android:
-    // muted harus di-set synchronous SEBELUM .play() dipanggil
-    // Jangan taruh di dalam .catch() karena itu async dan keluar dari user gesture
-    if (interacted) {
-      vid.muted = false;
-    } else {
-      vid.muted = true;
-    }
-    vid.play().catch(() => {
-      // Fallback: kalau gagal play dengan audio, coba muted
-      // Jangan unmute di sini karena sudah keluar dari user gesture
-      vid.muted = true;
-      vid.play().catch(() => {});
+    // Autoplay dengan audio kalau sudah interaksi
+    safePlay(vid, interacted).then(() => {
+      clearTimeout(unlockTimer);
+      // Unlock setelah video benar-benar mulai play (lebih reliable dari setTimeout)
+      locked = false;
     });
   }
-
-  // Unlock setelah transisi
-  setTimeout(() => { locked = false; }, 380);
 }
 
 // ─── INIT ────────────────────────────────────────────────────────────────────
