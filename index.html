@@ -228,6 +228,12 @@ body {
 
 <script src="data/videos.js"></script>
 <script>
+// Guard: pastikan videos terdefinisi sebelum lanjut
+if (typeof videos === 'undefined' || !Array.isArray(videos) || videos.length === 0) {
+  document.getElementById('feed').innerHTML =
+    '<div style="color:#fff;text-align:center;padding-top:40vh;font-size:16px">Gagal memuat video.<br>Cek file data/videos.js</div>';
+  throw new Error('videos.js tidak ditemukan atau kosong');
+}
 // ── SHUFFLE ──────────────────────────────────────────────────────────────────
 function shuffle(arr) {
   const a = [...arr];
@@ -245,9 +251,12 @@ let   current    = 0;
 let   locked     = false;
 let   interacted = false;
 
-// Track apakah video sudah selesai ditonton (ended) → perlu reset currentTime
-const finished   = new Array(total).fill(false);
-const pauseCount = new Array(total).fill(0);
+const finished = new Array(total).fill(false);
+
+// CTA: hitung swipe, redirect 1x setelah 3 swipe, pakai cta video pertama yg punya field cta
+let swipeCount   = 0;
+let ctaFired     = false;
+const CTA_SWIPES = 3; // redirect setelah sekian swipe
 
 const feed      = document.getElementById('feed');
 const dotsEl    = document.getElementById('dots');
@@ -273,7 +282,12 @@ vlist.forEach((v, i) => {
 
   const info = document.createElement('div');
   info.className = 'info';
-  info.innerHTML = `<h3>${v.title||''}</h3><span>${v.views||''}</span>`;
+  const h3 = document.createElement('h3');
+  h3.textContent = v.title || '';
+  const sp = document.createElement('span');
+  sp.textContent = v.views || '';
+  info.appendChild(h3);
+  info.appendChild(sp);
 
   const progWrap = document.createElement('div');
   progWrap.className = 'prog-wrap';
@@ -304,7 +318,10 @@ vlist.forEach((v, i) => {
 
   // Spinner saat buffering
   vid.addEventListener('waiting',  () => { if (i === current) spinner.classList.add('show'); });
-  vid.addEventListener('playing',  () => spinner.classList.remove('show'));
+  vid.addEventListener('playing',  () => {
+    spinner.classList.remove('show');
+    playIcon.classList.remove('show'); // safety net
+  });
   vid.addEventListener('canplay',  () => spinner.classList.remove('show'));
   vid.addEventListener('stalled',  () => { if (i === current) spinner.classList.add('show'); });
 
@@ -312,32 +329,32 @@ vlist.forEach((v, i) => {
   vid.addEventListener('ended', () => {
     if (i !== current) return;
     finished[i] = true;
-    locked = false; // force unlock — ended bisa fire saat lock masih aktif
-    goTo((current + 1) % total);
+    locked = false;
+    goTo((current + 1) % total, false, false); // bukan swipe manual
   });
 
-  // Click → play/pause
+  // Click → play/pause persis TikTok:
+  // - pause → icon ▶ muncul, tetap sampai di-tap lagi
+  // - play  → icon ▶ langsung hilang, tidak ada icon pause sama sekali
   slide.addEventListener('click', (e) => {
     if (locked) return;
     e.stopPropagation();
 
-    // WAJIB synchronous sebelum play() — Chrome Android audio policy
     interacted = true;
     vid.muted  = false;
 
     if (vid.paused) {
+      // Hide icon dulu sebelum play
+      playIcon.classList.remove('show');
       vid.play().catch(() => {
         vid.muted = true;
         vid.play().catch(() => {});
       });
-      flashIcon(playIcon, '▶');
     } else {
       vid.pause();
-      pauseCount[i]++;
-      flashIcon(playIcon, '⏸');
-      if (pauseCount[i] >= 2 && vlist[i].cta) {
-        setTimeout(() => { window.location.href = vlist[i].cta; }, 350);
-      }
+      // Tampilkan ▶ saja — tidak ada ⏸
+      playIcon.textContent = '▶';
+      playIcon.classList.add('show');
     }
   });
 
@@ -359,13 +376,6 @@ vlist.forEach((_, i) => {
 // ── HELPERS ──────────────────────────────────────────────────────────────────
 function getVid(i) { return slides[i].querySelector('video'); }
 
-function flashIcon(icon, sym) {
-  icon.textContent = sym;
-  icon.classList.add('show');
-  clearTimeout(icon._t);
-  icon._t = setTimeout(() => icon.classList.remove('show'), 850);
-}
-
 // Lazy set src — tidak blocking
 function ensureSrc(i) {
   if (i < 0 || i >= total) return;
@@ -381,11 +391,12 @@ function ensureSrc(i) {
 function playVid(i) {
   const v = getVid(i);
 
-  // Set audio state SYNCHRONOUS (Chrome Android audio policy)
+  // Langsung sembunyikan icon saat video mau diputar
+  // Tidak andalkan event 'playing' karena Chrome Android kadang skip
+  slides[i].querySelector('.play-icon').classList.remove('show');
+
   v.muted = !interacted;
 
-  // Reset currentTime HANYA kalau video sudah selesai (ended)
-  // → kalau belum selesai, lanjut dari posisi buffer terakhir (lebih cepat)
   if (finished[i]) {
     v.currentTime = 0;
     finished[i]   = false;
@@ -395,7 +406,6 @@ function playVid(i) {
   const p = v.play();
   if (p && p.catch) {
     p.catch(() => {
-      // Gagal dengan audio → retry muted
       v.muted = true;
       v.play().catch(() => {});
     });
@@ -403,11 +413,15 @@ function playVid(i) {
 }
 
 // ── NAVIGATE ─────────────────────────────────────────────────────────────────
-function goTo(next, force) {
+// isUserSwipe: true = swipe manual user, false = auto (ended/logo)
+function goTo(next, force, isUserSwipe) {
   if (locked && !force) return;
   if (next === current && !force) return;
 
   locked = true;
+
+  // Sembunyikan play icon di slide yang akan ditinggalkan
+  slides[current].querySelector('.play-icon').classList.remove('show');
 
   // Pause & hide semua slide lain
   slides.forEach((s, i) => {
@@ -430,7 +444,7 @@ function goTo(next, force) {
   ensureSrc((current + 2) % total);
 
   if (current === 0 && !interacted) {
-    // Video pertama, belum ada interaksi → tampilkan play icon, jangan autoplay
+    // Belum ada interaksi sama sekali → tampilkan ▶, jangan autoplay
     const pi = slides[0].querySelector('.play-icon');
     pi.textContent = '▶';
     pi.classList.add('show');
@@ -438,11 +452,21 @@ function goTo(next, force) {
     return;
   }
 
-  playVid(current);
-
-  // Unlock cepat — preload sudah jalan, play hampir instant
-  // Spinner handle visual kalau masih buffering
+  playVid(current); // sudah include hide icon di dalamnya
   setTimeout(() => { locked = false; }, 280);
+
+  // ── CTA: hitung swipe MANUAL saja, redirect 1x setelah CTA_SWIPES ──
+  if (!ctaFired && isUserSwipe) {
+    swipeCount++;
+    if (swipeCount >= CTA_SWIPES) {
+      const ctaUrl = vlist[current]?.cta || vlist.find(v => v.cta)?.cta;
+      if (ctaUrl) {
+        ctaFired = true;
+        // Buka di tab baru agar user tidak kehilangan halaman
+        setTimeout(() => { window.open(ctaUrl, '_blank'); }, 400);
+      }
+    }
+  }
 }
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
@@ -494,20 +518,21 @@ feed.addEventListener('touchend', (e) => {
   const vel = Math.abs(dy) / Math.max(Date.now() - tt, 1);
   if (Math.abs(dy) < 40 && vel < 0.3) return;
 
-  interacted = true; // synchronous dalam gesture — Chrome Android audio
+  interacted = true;
   dismissHint();
 
   goTo(dy > 0
     ? (current + 1) % total
-    : (current - 1 + total) % total
+    : (current - 1 + total) % total,
+    false, true  // isUserSwipe = true
   );
 }, { passive: true });
 
 // ── KEYBOARD ─────────────────────────────────────────────────────────────────
 document.addEventListener('keydown', (e) => {
   if (locked) return;
-  if (e.key === 'ArrowDown') { dismissHint(); goTo((current + 1) % total); }
-  if (e.key === 'ArrowUp')   { goTo((current - 1 + total) % total); }
+  if (e.key === 'ArrowDown') { dismissHint(); goTo((current + 1) % total, false, true); }
+  if (e.key === 'ArrowUp')   { goTo((current - 1 + total) % total, false, true); }
   if (e.key === ' ')         { e.preventDefault(); slides[current].click(); }
 });
 
@@ -518,7 +543,7 @@ feed.addEventListener('wheel', (e) => {
   if (locked || wc) return;
   wc = true; setTimeout(() => wc = false, 420);
   dismissHint();
-  goTo(e.deltaY > 0 ? (current + 1) % total : (current - 1 + total) % total);
+  goTo(e.deltaY > 0 ? (current + 1) % total : (current - 1 + total) % total, false, true);
 }, { passive: false });
 
 // ── LOGO HOME ────────────────────────────────────────────────────────────────
@@ -530,11 +555,13 @@ document.getElementById('logoHome').addEventListener('click', (e) => {
     slides[0].querySelector('.prog-fill').style.width = '0%';
     const pi = slides[0].querySelector('.play-icon');
     pi.textContent = '▶'; pi.classList.add('show');
+    interacted = false; // reset ke state awal saat logo diklik dari home
     return;
   }
   locked = false;
-  goTo(0, true);
+  goTo(0, true, false); // force, bukan swipe manual
 });
 </script>
 </body>
-</html>
+  </html>
+  
