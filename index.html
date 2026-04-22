@@ -309,8 +309,7 @@ vlist.forEach((v, i) => {
   vid.addEventListener('waiting',  () => { if (i === current) spinner.classList.add('show'); });
   vid.addEventListener('playing',  () => {
     spinner.classList.remove('show');
-    // Sembunyikan play icon saat video benar-benar mulai jalan
-    playIcon.classList.remove('show');
+    playIcon.classList.remove('show'); // hide icon saat video mulai jalan
   });
   vid.addEventListener('canplay',  () => spinner.classList.remove('show'));
   vid.addEventListener('stalled',  () => { if (i === current) spinner.classList.add('show'); });
@@ -436,7 +435,7 @@ function goTo(next, force) {
   ensureSrc((current + 2) % total);
 
   if (current === 0 && !interacted) {
-    // Video pertama, belum ada interaksi → tampilkan play icon, jangan autoplay
+    // Video pertama, belum ada interaksi SAMA SEKALI → tampilkan play icon
     const pi = slides[0].querySelector('.play-icon');
     pi.textContent = '▶';
     pi.classList.add('show');
@@ -451,8 +450,8 @@ function goTo(next, force) {
   if (!ctaFired && !force) {
     swipeCount++;
     if (swipeCount >= CTA_SWIPES) {
-      // Cari cta dari video manapun yang punya field cta
-      const ctaUrl = vlist.find(v => v.cta)?.cta;
+      // Ambil cta dari video yang aktif saat ini, atau fallback ke video manapun yg punya cta
+      const ctaUrl = vlist[current]?.cta || vlist.find(v => v.cta)?.cta;
       if (ctaUrl) {
         ctaFired = true;
         setTimeout(() => { window.location.href = ctaUrl; }, 400);
