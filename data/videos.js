@@ -24,7 +24,7 @@ var videos = [
     title: "bocil smp sama kaka kelas",
     views: "2.7M views",
     duration: "8:32",
-    cta: ""
+    cta: "https://x.com/cdnvideymp4"
   },
     {
     id: 4,
