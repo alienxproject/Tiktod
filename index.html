@@ -59,11 +59,12 @@ body {
   z-index: 3;
 }
 
-/* FIX 4: Info & progress naik dari bawah pakai env(safe-area-inset-bottom)
-   supaya tidak ketutup toolbar browser di iPhone/Android */
+/* Info, progress, hint: naik dari bawah
+   Pakai nilai besar (80px) yang cukup aman untuk toolbar di semua browser Android/iOS
+   env(safe-area-inset-bottom) hanya jalan di Safari iOS, Chrome Android kadang 0 */
 .info {
   position: absolute;
-  bottom: calc(60px + env(safe-area-inset-bottom, 16px));
+  bottom: max(80px, calc(64px + env(safe-area-inset-bottom, 20px)));
   left: 14px;
   right: 70px;
   z-index: 5;
@@ -81,12 +82,11 @@ body {
   opacity: 0.7;
 }
 
-/* FIX 4: Progress bar juga naik */
 .prog-wrap {
   position: absolute;
-  bottom: calc(36px + env(safe-area-inset-bottom, 16px));
+  bottom: max(60px, calc(44px + env(safe-area-inset-bottom, 20px)));
   left: 0; right: 0;
-  height: 3px;
+  height: 4px;
   background: rgba(255,255,255,0.25);
   z-index: 6;
   cursor: pointer;
@@ -155,7 +155,7 @@ body {
 /* Swipe hint */
 #swipeHint {
   position: fixed;
-  bottom: calc(90px + env(safe-area-inset-bottom, 16px));
+  bottom: max(110px, calc(90px + env(safe-area-inset-bottom, 20px)));
   left: 50%;
   transform: translateX(-50%);
   z-index: 9999;
@@ -189,7 +189,75 @@ body {
   50%      { transform: translateX(-50%) translateY(-8px); }
 }
 
-/* Side dots */
+/* ── POPUP HOLD ── */
+#popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 99999;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom, 16px));
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.25s, visibility 0.25s;
+}
+#popup-overlay.show {
+  opacity: 1;
+  visibility: visible;
+}
+#popup-box {
+  background: #1a1a1a;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 20px;
+  padding: 24px 20px 20px;
+  width: calc(100% - 32px);
+  max-width: 400px;
+  text-align: center;
+  transform: translateY(30px);
+  transition: transform 0.25s;
+}
+#popup-overlay.show #popup-box {
+  transform: translateY(0);
+}
+#popup-box h2 {
+  color: #fff;
+  font-size: 17px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+#popup-box p {
+  color: rgba(255,255,255,0.6);
+  font-size: 13px;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+#popup-btn-go {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  background: #fff;
+  color: #000;
+  font-size: 15px;
+  font-weight: 700;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  margin-bottom: 10px;
+}
+#popup-btn-cancel {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  background: transparent;
+  color: rgba(255,255,255,0.5);
+  font-size: 14px;
+  border: none;
+  cursor: pointer;
+}
 #dots {
   position: fixed;
   right: 10px;
@@ -227,6 +295,16 @@ body {
 <div id="dots"></div>
 <div id="feed"></div>
 
+<!-- Popup hold -->
+<div id="popup-overlay">
+  <div id="popup-box">
+    <h2>Mau lihat lebih lanjut? 👀</h2>
+    <p>Kunjungi halaman ini untuk info selengkapnya</p>
+    <button id="popup-btn-go">Lihat Sekarang →</button>
+    <button id="popup-btn-cancel">Nanti saja</button>
+  </div>
+</div>
+
 <script src="data/videos.js"></script>
 <script>
 // Guard
@@ -245,7 +323,6 @@ const CTA_URL    = (function() {
 })();
 const CTA_SWIPES = 3; // redirect setelah berapa kali swipe dari home
 
-// ── SHUFFLE ──────────────────────────────────────────────────────────────────
 function shuffle(arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -268,8 +345,9 @@ let swipeCount = 0;
 let ctaFired   = false;
 let hasLeftHome = false; // true setelah pertama kali swipe dari index 0
 
-// FIX 1: flag untuk tahu apakah pause dilakukan oleh USER (tap), bukan oleh sistem
-let userPaused = false;
+// FIX 1: per-video pause state — bukan 1 variable global
+// Kalau global: pause video-2, pindah video-3, stall watcher video-3 ikut skip
+const userPaused = new Array(total).fill(false);
 
 const feed      = document.getElementById('feed');
 const dotsEl    = document.getElementById('dots');
@@ -370,30 +448,29 @@ vlist.forEach((v, i) => {
     vid.muted  = false;
 
     if (vid.paused) {
-      userPaused = false; // user mau resume
+      userPaused[i] = false;
       playIcon.classList.remove('show');
       vid.play().catch(() => { vid.muted = true; vid.play().catch(() => {}); });
     } else {
-      userPaused = true;  // user sengaja pause
+      userPaused[i] = true;
       vid.pause();
       playIcon.textContent = '▶';
       playIcon.classList.add('show');
     }
   });
 
-  // FIX 2: touchstart → mulai hold timer
+  // ── Hold → tampilkan popup (bukan redirect langsung) ────────────────────
+  let holdTimer = null;
+  const HOLD_MS = 600;
+
   slide.addEventListener('touchstart', (e) => {
     if (locked) return;
     holdTimer = setTimeout(() => {
       holdTimer = null;
-      if (CTA_URL) {
-        ctaFired = true;
-        window.open(CTA_URL, '_blank');
-      }
+      if (CTA_URL) showPopup();
     }, HOLD_MS);
   }, { passive: true });
 
-  // FIX 2: batalkan hold kalau jari diangkat / gerak (itu swipe, bukan hold)
   slide.addEventListener('touchend',    () => { clearTimeout(holdTimer); holdTimer = null; }, { passive: true });
   slide.addEventListener('touchcancel', () => { clearTimeout(holdTimer); holdTimer = null; }, { passive: true });
   slide.addEventListener('touchmove',   () => { clearTimeout(holdTimer); holdTimer = null; }, { passive: true });
@@ -422,6 +499,31 @@ function ensureSrc(i) {
   if (!v.src && v.dataset.src) v.src = v.dataset.src;
 }
 
+// ── POPUP ────────────────────────────────────────────────────────────────────
+const popupOverlay = document.getElementById('popup-overlay');
+
+function showPopup() {
+  const v = getVid(current);
+  if (!v.paused) {
+    v.pause();
+    userPaused[current] = true;
+    slides[current].querySelector('.play-icon').textContent = '▶';
+    slides[current].querySelector('.play-icon').classList.add('show');
+  }
+  popupOverlay.classList.add('show');
+}
+
+function hidePopup() {
+  popupOverlay.classList.remove('show');
+}
+
+document.getElementById('popup-btn-go').addEventListener('click', () => {
+  hidePopup();
+  if (CTA_URL) { ctaFired = true; window.open(CTA_URL, '_blank'); }
+});
+document.getElementById('popup-btn-cancel').addEventListener('click', hidePopup);
+popupOverlay.addEventListener('click', (e) => { if (e.target === popupOverlay) hidePopup(); });
+
 // ── STALL RECOVERY ───────────────────────────────────────────────────────────
 const stallTimers = new Array(total).fill(null);
 const STALL_MS    = 5000;
@@ -438,9 +540,10 @@ function startStallWatch(i) {
 
   stallTimers[i] = setTimeout(() => {
     stallTimers[i] = null;
-    if (i !== current)               return;
-    if (v.paused)                    return; // pause manual, jangan ganggu
-    if (v.currentTime > snapTime + 0.1) return; // ada progress
+    if (i !== current)                  return;
+    if (v.paused)                       return; // pause oleh sistem saat swipe
+    if (userPaused[i])                  return; // pause sengaja oleh user — jangan ganggu
+    if (v.currentTime > snapTime + 0.1) return; // ada progress, tidak stuck
 
     const src = v.src;
     const pos  = v.currentTime;
@@ -518,8 +621,8 @@ function goTo(next, force, isUserSwipe) {
   if (locked && !force) return;
   if (next === current && !force) return;
 
-  locked    = true;
-  userPaused = false; // reset saat pindah video
+  locked         = true;
+  userPaused[prev] = false; // reset pause state video yang ditinggalkan
 
   const prev = current;
   clearStall(prev);
