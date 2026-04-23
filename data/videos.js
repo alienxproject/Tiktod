@@ -3,10 +3,10 @@ var videos = [
     id: 1,
     src: "https://cdn.videy.co/23UfokTP1.mp4",
     thumb: "",
-    title: "dede suka main bantal ",
+    title: "dedek suka main bantal ",
     views: "699k views",
     duration: "8:32",
-    cta: ""
+    cta: "https://s.shopee.co.id/8V5E3MrmKp"
   },
     {
     id: 2,
@@ -24,13 +24,13 @@ var videos = [
     title: "bocil smp sama kaka kelas",
     views: "2.7M views",
     duration: "8:32",
-    cta: "https://x.com/cdnvideymp4"
+    cta: ""
   },
     {
     id: 4,
-    src: "https://cdn.videy.co/lP0S0ywP1.mp4",
+    src: "https://cdn.videy.co/6vDjEMbt1.mp4",
     thumb: "",
-    title: "majn sama anjingku",
+    title: "masih pink",
     views: "780K views",
     duration: "8:32",
     cta: ""
@@ -51,7 +51,7 @@ var videos = [
     title: "tahan jangan sampe keluar",
     views: "342K views",
     duration: "8:32",
-    cta: "https://x.com/cdnvideymp4"
+    cta: ""
   },
     {
     id: 7,
@@ -78,7 +78,7 @@ var videos = [
     title: "belum pernah ngewe ",
     views: "6.3M views",
     duration: "8:32",
-    cta: "https://x.com/cdnvideymp4"
+    cta: ""
   },
     {
     id: 10,
@@ -105,13 +105,13 @@ var videos = [
     title: "spg magang kena ospek bos",
     views: "305K views",
     duration: "20:12",
-    cta: "https://x.com/cdnvideymp4"
+    cta: ""
   },
   {
     id: 13,
-    src: "https://cdn.videy.co/wbFIgDD81.mp4",
+    src: "https://cdn.videy.co/TaVkRXJD1.mp4",
     thumb: "",
-    title: "seleb TikTok suka colmek",
+    title: "bungkus pengamen cakep",
     views: "3.2M views",
     duration: "6:11",
     cta: ""
@@ -133,7 +133,7 @@ var videos = [
     title: "pembantu jawa gaada obat",
     views: "321K views",
     duration: "6:11",
-    cta: "https://x.com/cdnvideymp4"
+    cta: ""
   },
   
   {
@@ -163,9 +163,8 @@ var videos = [
     title: "goyanganya bikin keluar",
     views: "378K views",
     duration: "6:11",
-    cta: "https://x.com/cdnvideymp4"
+    cta: ""
   },
-  
   {
     id: 19,
     src: "https://cdn.videy.co/QLlc7SOJ1.mp4",
@@ -175,8 +174,98 @@ var videos = [
     duration: "6:11",
     cta: ""
   },
-  {
+    {
     id: 20,
+    src: "https://cdn.videy.co/IenpIcTN1.mp4",
+    thumb: "",
+    title: "FWB anak twitter",
+    views: "655K views",
+    duration: "6:11",
+    cta: ""
+  },
+  {
+    id: 21,
+    src: "https://cdn.videy.co/SCCLSczc1.mp4",
+    thumb: "",
+    title: "kok bisa enak banget",
+    views: "9.1M views",
+    duration: "6:11",
+    cta: ""
+  },
+  {
+    id: 22,
+    src: "https://cdn.videy.co/Csv3UTKJ1.mp4",
+    thumb: "",
+    title: "padahal masih kecil",
+    views: "871K views",
+    duration: "6:11",
+    cta: ""
+  },
+  {
+    id: 23,
+    src: "https://cdn.videy.co/OYPbsbrL1.mp4",
+    thumb: "",
+    title: "jam istirahat",
+    views: "7.1M views",
+    duration: "6:11",
+    cta: ""
+  },
+  {
+    id: 24,
+    src: "https://cdn.aceimg.com/0e1f681ea.mp4",
+    thumb: "",
+    title: "gas poll maaak",
+    views: "839K views",
+    duration: "6:11",
+    cta: ""
+  },
+  {
+    id: 25,
+    src: "https://cdn.aceimg.com/4d9ffc231.mp4",
+    thumb: "",
+    title: "cindo pulen cute",
+    views: "3.6M views",
+    duration: "6:11",
+    cta: ""
+  },
+  {
+    id: 26,
+    src: "https://cdn2.videy.co/lGyYIQ9f1.mp4",
+    thumb: "",
+    title: "gini kah caranya kak ?",
+    views: "843K views",
+    duration: "6:11",
+    cta: ""
+  },
+  {
+    id: 27,
+    src: "https://cdn.aceimg.com/159639380.mp4",
+    thumb: "",
+    title: "bercanda sama sepupu",
+    views: "6.1M views",
+    duration: "6:11",
+    cta: ""
+  },
+  {
+    id: 28,
+    src: "https://cdn2.videy.co/KXfRAsBh1.mp4",
+    thumb: "",
+    title: "susah punya adek masih sempit",
+    views: "211K views",
+    duration: "6:11",
+    cta: ""
+  },
+  {
+    id: 29,
+    src: "https://cdn.aceimg.com/f6f3f9b7d.mp4",
+    thumb: "",
+    title: "jangan ngomong mama papa",
+    views: "11.5M views",
+    duration: "6:11",
+    cta: ""
+  },
+  {
+    id: 30,
     src: "https://cdn.videy.co/wbFIgDD81.mp4",
     thumb: "",
     title: "pelan pelan aja dek",
