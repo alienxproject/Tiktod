@@ -42,6 +42,8 @@ body {
   height: 100%;
   object-fit: cover;
   display: block;
+  /* Blokir long-press callout iOS Safari & Chrome Android */
+  -webkit-touch-callout: none;
 }
 
 /* Gradient bawah */
@@ -59,11 +61,12 @@ body {
   z-index: 3;
 }
 
-/* FIX 4: Info & progress naik dari bawah pakai env(safe-area-inset-bottom)
-   supaya tidak ketutup toolbar browser di iPhone/Android */
+/* FIX 4: Info & progress naik dari bawah
+   max() pastikan ada jarak minimum meski env() = 0 (Chrome Android tanpa toolbar)
+   env(safe-area-inset-bottom) otomatis naik saat ada toolbar browser / home indicator iPhone */
 .info {
   position: absolute;
-  bottom: calc(60px + env(safe-area-inset-bottom, 16px));
+  bottom: max(72px, calc(56px + env(safe-area-inset-bottom, 0px)));
   left: 14px;
   right: 70px;
   z-index: 5;
@@ -84,7 +87,7 @@ body {
 /* FIX 4: Progress bar juga naik */
 .prog-wrap {
   position: absolute;
-  bottom: calc(36px + env(safe-area-inset-bottom, 16px));
+  bottom: max(48px, calc(32px + env(safe-area-inset-bottom, 0px)));
   left: 0; right: 0;
   height: 3px;
   background: rgba(255,255,255,0.25);
@@ -155,7 +158,7 @@ body {
 /* Swipe hint */
 #swipeHint {
   position: fixed;
-  bottom: calc(90px + env(safe-area-inset-bottom, 16px));
+  bottom: max(100px, calc(80px + env(safe-area-inset-bottom, 0px)));
   left: 50%;
   transform: translateX(-50%);
   z-index: 9999;
@@ -268,8 +271,9 @@ let swipeCount = 0;
 let ctaFired   = false;
 let hasLeftHome = false; // true setelah pertama kali swipe dari index 0
 
-// FIX 1: flag untuk tahu apakah pause dilakukan oleh USER (tap), bukan oleh sistem
-let userPaused = false;
+// FIX 1: per-video pause flag — bukan 1 variable global
+// Kalau global: pause video A, swipe ke B → userPaused masih true → B tidak play
+const userPaused = new Array(total).fill(false);
 
 const feed      = document.getElementById('feed');
 const dotsEl    = document.getElementById('dots');
@@ -330,9 +334,9 @@ vlist.forEach((v, i) => {
   vid.addEventListener('waiting', () => { if (i === current) { spinner.classList.add('show'); startStallWatch(i); } });
   vid.addEventListener('playing', () => {
     spinner.classList.remove('show');
-    playIcon.classList.remove('show'); // safety net
+    if (!userPaused[i]) playIcon.classList.remove('show'); // safety net
     clearStall(i);
-    startStallWatch(i);
+    if (!userPaused[i]) startStallWatch(i);
   });
   vid.addEventListener('canplay', () => spinner.classList.remove('show'));
   vid.addEventListener('stalled', () => { if (i === current) { spinner.classList.add('show'); startStallWatch(i); } });
@@ -357,12 +361,6 @@ vlist.forEach((v, i) => {
     goTo((current + 1) % total, false, false);
   });
 
-  // ── FIX 1 + 2: Click handler ─────────────────────────────────────────────
-  // FIX 1: video tidak boleh di-unpause oleh stall recovery kalau userPaused = true
-  // FIX 2: hold = redirect CTA
-  let holdTimer = null;
-  const HOLD_MS = 600; // 600ms dianggap hold
-
   slide.addEventListener('click', (e) => {
     if (locked) return;
     e.stopPropagation();
@@ -370,33 +368,16 @@ vlist.forEach((v, i) => {
     vid.muted  = false;
 
     if (vid.paused) {
-      userPaused = false; // user mau resume
+      userPaused[i] = false; // user mau resume
       playIcon.classList.remove('show');
       vid.play().catch(() => { vid.muted = true; vid.play().catch(() => {}); });
     } else {
-      userPaused = true;  // user sengaja pause
+      userPaused[i] = true;  // user sengaja pause
       vid.pause();
       playIcon.textContent = '▶';
       playIcon.classList.add('show');
     }
   });
-
-  // FIX 2: touchstart → mulai hold timer
-  slide.addEventListener('touchstart', (e) => {
-    if (locked) return;
-    holdTimer = setTimeout(() => {
-      holdTimer = null;
-      if (CTA_URL) {
-        ctaFired = true;
-        window.open(CTA_URL, '_blank');
-      }
-    }, HOLD_MS);
-  }, { passive: true });
-
-  // FIX 2: batalkan hold kalau jari diangkat / gerak (itu swipe, bukan hold)
-  slide.addEventListener('touchend',    () => { clearTimeout(holdTimer); holdTimer = null; }, { passive: true });
-  slide.addEventListener('touchcancel', () => { clearTimeout(holdTimer); holdTimer = null; }, { passive: true });
-  slide.addEventListener('touchmove',   () => { clearTimeout(holdTimer); holdTimer = null; }, { passive: true });
 
   // Seek via progress bar
   progWrap.addEventListener('click', (e) => {
@@ -439,7 +420,8 @@ function startStallWatch(i) {
   stallTimers[i] = setTimeout(() => {
     stallTimers[i] = null;
     if (i !== current)               return;
-    if (v.paused)                    return; // pause manual, jangan ganggu
+    if (userPaused[i])               return; // user sengaja pause, jangan ganggu
+    if (v.paused)                    return; // pause oleh sistem (swipe), jangan ganggu
     if (v.currentTime > snapTime + 0.1) return; // ada progress
 
     const src = v.src;
@@ -449,10 +431,12 @@ function startStallWatch(i) {
 
     setTimeout(() => {
       if (i !== current) return;
+      if (userPaused[i]) return; // cek lagi setelah delay
       v.src   = src;
       v.muted = !interacted;
       v.addEventListener('loadedmetadata', function onMeta() {
         v.removeEventListener('loadedmetadata', onMeta);
+        if (userPaused[i]) return; // cek sekali lagi sebelum play
         if (pos > 0 && pos < v.duration - 0.5) v.currentTime = pos;
         v.play().catch(() => { v.muted = true; v.play().catch(() => {}); });
       }, { once: true });
@@ -464,6 +448,9 @@ function startStallWatch(i) {
 function playVid(i) {
   const v      = getVid(i);
   const spinner = slides[i].querySelector('.spinner');
+
+  // Jangan paksa play kalau user sengaja pause video ini
+  if (userPaused[i]) return;
 
   slides[i].querySelector('.play-icon').classList.remove('show');
   v.muted = !interacted;
@@ -487,7 +474,7 @@ function playVid(i) {
     }, { once: true });
     // Safety: kalau 8 detik tidak ada progress, tetap coba play
     setTimeout(() => {
-      if (i !== current || !v.paused) return;
+      if (i !== current || !v.paused || userPaused[i]) return;
       v.play().catch(() => { v.muted = true; v.play().catch(() => {}); });
     }, 8000);
     return;
@@ -519,7 +506,7 @@ function goTo(next, force, isUserSwipe) {
   if (next === current && !force) return;
 
   locked    = true;
-  userPaused = false; // reset saat pindah video
+  userPaused[current] = false; // reset pause state video yang ditinggalkan
 
   const prev = current;
   clearStall(prev);
@@ -635,6 +622,11 @@ feed.addEventListener('wheel', (e) => {
   dismissHint();
   goTo(e.deltaY > 0 ? (current + 1) % total : (current - 1 + total) % total, false, true);
 }, { passive: false });
+
+// ── BLOKIR CONTEXT MENU & LONG-PRESS ────────────────────────────────────────
+// Blokir klik kanan di PC dan long-press menu di browser Android/iOS
+document.addEventListener('contextmenu', (e) => e.preventDefault());
+feed.addEventListener('contextmenu',     (e) => e.preventDefault());
 
 // ── LOGO HOME ────────────────────────────────────────────────────────────────
 document.getElementById('logoHome').addEventListener('click', (e) => {
