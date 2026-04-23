@@ -42,6 +42,9 @@ body {
   height: 100%;
   object-fit: cover;
   display: block;
+  /* Blokir context menu native browser saat hold/klik kanan */
+  -webkit-touch-callout: none;
+  pointer-events: auto;
 }
 
 /* Gradient bawah */
@@ -314,14 +317,17 @@ if (typeof videos === 'undefined' || !Array.isArray(videos) || videos.length ===
   throw new Error('videos.js tidak ditemukan atau kosong');
 }
 
-// ── FIX 3: CTA URL — cukup definisikan 1x di sini, tidak perlu di tiap video ──
-// Ambil dari field "cta" manapun di videos.js, atau set manual di sini:
-const CTA_URL    = (function() {
-  if (typeof ctaUrl !== 'undefined' && ctaUrl) return ctaUrl; // support var ctaUrl di videos.js
+// ── CTA URL — cukup 1 baris di videos.js ─────────────────────────────────────
+// Di videos.js tambahkan baris ini di PALING ATAS:
+//   var ctaUrl = "https://linkmu.com";
+//
+// Kalau tidak ada, sistem akan cari field cta di salah satu item video (fallback)
+const CTA_URL = (function() {
+  if (typeof ctaUrl !== 'undefined' && ctaUrl) return ctaUrl;
   const found = videos.find(v => v.cta);
   return found ? found.cta : '';
 })();
-const CTA_SWIPES = 3; // redirect setelah berapa kali swipe dari home
+const CTA_SWIPES = 3;
 
 function shuffle(arr) {
   const a = [...arr];
@@ -408,9 +414,11 @@ vlist.forEach((v, i) => {
   vid.addEventListener('waiting', () => { if (i === current) { spinner.classList.add('show'); startStallWatch(i); } });
   vid.addEventListener('playing', () => {
     spinner.classList.remove('show');
-    playIcon.classList.remove('show'); // safety net
+    // Hanya hide icon kalau memang bukan dari user-pause resume
+    // (userPaused[i] = false sudah di-set di click handler sebelum play)
+    if (!userPaused[i]) playIcon.classList.remove('show');
     clearStall(i);
-    startStallWatch(i);
+    if (!userPaused[i]) startStallWatch(i);
   });
   vid.addEventListener('canplay', () => spinner.classList.remove('show'));
   vid.addEventListener('stalled', () => { if (i === current) { spinner.classList.add('show'); startStallWatch(i); } });
@@ -556,6 +564,7 @@ function startStallWatch(i) {
       v.muted = !interacted;
       v.addEventListener('loadedmetadata', function onMeta() {
         v.removeEventListener('loadedmetadata', onMeta);
+        if (userPaused[i]) return; // user pause manual, jangan paksa play
         if (pos > 0 && pos < v.duration - 0.5) v.currentTime = pos;
         v.play().catch(() => { v.muted = true; v.play().catch(() => {}); });
       }, { once: true });
@@ -565,8 +574,11 @@ function startStallWatch(i) {
 
 // ── PLAY ─────────────────────────────────────────────────────────────────────
 function playVid(i) {
-  const v      = getVid(i);
+  const v       = getVid(i);
   const spinner = slides[i].querySelector('.spinner');
+
+  // Jangan play kalau user sengaja pause — hormati pilihan user
+  if (userPaused[i]) return;
 
   slides[i].querySelector('.play-icon').classList.remove('show');
   v.muted = !interacted;
@@ -621,10 +633,10 @@ function goTo(next, force, isUserSwipe) {
   if (locked && !force) return;
   if (next === current && !force) return;
 
-  locked         = true;
-  userPaused[prev] = false; // reset pause state video yang ditinggalkan
+  locked = true;
 
-  const prev = current;
+  const prev = current; // HARUS deklarasi dulu sebelum dipakai
+  userPaused[prev] = false; // reset pause state video yang ditinggalkan
   clearStall(prev);
   slides[prev].querySelector('.play-icon').classList.remove('show');
 
@@ -739,7 +751,9 @@ feed.addEventListener('wheel', (e) => {
   goTo(e.deltaY > 0 ? (current + 1) % total : (current - 1 + total) % total, false, true);
 }, { passive: false });
 
-// ── LOGO HOME ────────────────────────────────────────────────────────────────
+// ── BLOKIR CONTEXT MENU (klik kanan PC + hold browser Android) ───────────────
+feed.addEventListener('contextmenu', (e) => e.preventDefault());
+document.addEventListener('contextmenu', (e) => e.preventDefault());
 document.getElementById('logoHome').addEventListener('click', (e) => {
   e.stopPropagation();
   if (current === 0) {
