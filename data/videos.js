@@ -2,11 +2,11 @@ var videos = [
   {
     id: 1,
     src: "https://cdn.videy.co/23UfokTP1.mp4",
-    thumb: "",
+    thumb: "https://i.ibb.co.com/23vZRK7p/1000160130.jpg",
     title: "dedek suka main bantal ",
     views: "699k views",
     duration: "8:32",
-    cta: "https://s.shopee.co.id/8V5E3MrmKp"
+    cta: "https://s.shopee.co.id/4AwRaVSEda"
   },
     {
     id: 2,
@@ -270,6 +270,186 @@ var videos = [
     thumb: "",
     title: "pelan pelan aja dek",
     views: "1.1M views",
+    duration: "6:11",
+    cta: ""
+  },
+  {
+    id: 31,
+    src: "https://cdn2.slicedrive.com/U25FG8GA1.mp4",
+    thumb: "",
+    title: "Yg penting nyaman",
+    views: "3.5M views",
+    duration: "6:11",
+    cta: ""
+},
+  {
+    id: 32,
+    src: "https://cdn2.slicedrive.com/Z40Wp1uc1.mp4",
+    thumb: "",
+    title: "Permintaan terakhir mantan",
+    views: "12M views",
+    duration: "6:11",
+    cta: ""
+  },
+   {
+    id: 33,
+    src: "https://cdn2.slicedrive.com/yqpy3ZN51.mp4",
+    thumb: "",
+    title: "Tante suka nakal ya",
+    views: "1.6M views",
+    duration: "6:11",
+    cta: ""
+},
+  {
+    id: 34,
+    src: "https://media.slicedrive.com/17D70sQE1.mp4",
+    thumb: "",
+    title: "tetangga kos janda",
+    views: "340K views",
+    duration: "6:11",
+    cta: ""
+  },
+ {
+    id: 35,
+    src: "https://media.slicedrive.com/9haj84nj1.mp4",
+    thumb: "",
+    title: "Di sebarin mantan",
+    views: "150K views",
+    duration: "6:11",
+    cta: ""
+},
+  {
+    id: 36,
+    src: "https://media.slicedrive.com/hvPpbLLP1.mp4",
+    thumb: "",
+    title: "Cindo masih esdeh",
+    views: "662K views",
+    duration: "6:11",
+    cta: ""
+  },
+ {
+    id: 37,
+    src: "https://media.slicedrive.com/kgjM5Si81.mp4",
+    thumb: "",
+    title: "Terlalu sempit hampir tidak muat",
+    views: "10M views",
+    duration: "6:11",
+    cta: ""
+},
+  {
+    id: 38,
+    src: "https://media.slicedrive.com/ZDldzx5R1.mp4",
+    thumb: "",
+    title: "Temen kkn di penginapan",
+    views: "3.1M views",
+    duration: "6:11",
+    cta: ""
+  },
+   {
+    id: 39,
+    src: "https://media.slicedrive.com/xYdtXz8F1.mp4",
+    thumb: "",
+    title: "Betah kalo pacar gini",
+    views: "15M views",
+    duration: "6:11",
+    cta: ""
+},
+  {
+    id: 40,
+    src: "https://media.slicedrive.com/syPdaWMi1.mp4",
+    thumb: "",
+    title: "Adek jago banget sumpah",
+    views: "5.3M views",
+    duration: "6:11",
+    cta: ""
+  },
+   {
+    id: 41,
+    src: "https://cdn2.slicedrive.com/nRzM5Pff1.mp4",
+    thumb: "",
+    title: "Digilir temen bapak",
+    views: "8M views",
+    duration: "6:11",
+    cta: ""
+},
+  {
+    id: 42,
+    src: "https://cdn2.slicedrive.com/ouoi85Rg1.mp4",
+    thumb: "",
+    title: "Keluarga cemara",
+    views: "13M views",
+    duration: "6:11",
+    cta: ""
+  },
+ {
+    id: 43,
+    src: "https://media.slicedrive.com/NOCY5i661.mp4",
+    thumb: "",
+    title: "Maju mundur enak",
+    views: "3.7M views",
+    duration: "6:11",
+    cta: ""
+},
+  {
+    id: 44,
+    src: "https://media.slicedrive.com/K4NOLhLO1.mp4",
+    thumb: "",
+    title: "Masuk aja gpp ?",
+    views: "16M views",
+    duration: "6:11",
+    cta: ""
+  },
+ {
+    id: 45,
+    src: "https://media.slicedrive.com/IEGYjLsC1.mp4",
+    thumb: "",
+    title: "Kecil kecil boleh juga",
+    views: "20M views",
+    duration: "6:11",
+    cta: ""
+},
+  {
+    id: 46,
+    src: "https://media.slicedrive.com/oR72PQJT1.mp4",
+    thumb: "",
+    title: "Percaya aja sama ayah",
+    views: "21M views",
+    duration: "6:11",
+    cta: ""
+  },
+ {
+    id: 47,
+    src: "https://cdn2.slicedrive.com/R5wXsQOD1.mp4",
+    thumb: "",
+    title: "Kakak masuk kamar tengah malam",
+    views: "30M views",
+    duration: "6:11",
+    cta: ""
+},
+  {
+    id: 48,
+    src: "https://media.slicedrive.com/G7La6ONC1.mp4",
+    thumb: "",
+    title: "🔴LIVE suka suka aku dong",
+    views: "36M views",
+    duration: "6:11",
+    cta: ""
+  },
+ {
+    id: 49,
+    src: "https://media.slicedrive.com/qYv2RDZt1.mp4",
+    thumb: "",
+    title: "Main berisik ntar ketahuan",
+    views: "15M views",
+    duration: "6:11",
+    cta: ""
+},
+  {
+    id: 50,
+    src: "https://cdn2.slicedrive.com/frsJDBYb1.mp4",
+    thumb: "",
+    title: "Halo dek dapat jatah",
+    views: "50M views",
     duration: "6:11",
     cta: ""
   }
