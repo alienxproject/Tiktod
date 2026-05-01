@@ -739,7 +739,7 @@ document.getElementById('drHomeBtnFooter').addEventListener('click', function(){
 });
 
 drawerPanel.querySelectorAll('.dr-link').forEach(function(link){
-  link.addEventListener('click', function(){ closeDrawer(); });
+  link.addEventListener('click', function(){ setTimeout(closeDrawer, 0); });
 });
 
 var drSwipeStartX = 0;
