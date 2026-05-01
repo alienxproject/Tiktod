@@ -739,7 +739,7 @@ document.getElementById('drHomeBtnFooter').addEventListener('click', function(){
 });
 
 drawerPanel.querySelectorAll('.dr-link').forEach(function(link){
-  link.addEventListener('click', function(){ setTimeout(closeDrawer, 150); });
+  link.addEventListener('click', function(){ closeDrawer(); });
 });
 
 var drSwipeStartX = 0;
@@ -749,4 +749,3 @@ drawerPanel.addEventListener('touchstart', function(e){
 drawerPanel.addEventListener('touchend', function(e){
   if (e.changedTouches[0].clientX - drSwipeStartX > 60) closeDrawer();
 }, { passive: true });
-document.body.style.visibility = 'visible';
