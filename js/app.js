@@ -749,3 +749,4 @@ drawerPanel.addEventListener('touchstart', function(e){
 drawerPanel.addEventListener('touchend', function(e){
   if (e.changedTouches[0].clientX - drSwipeStartX > 60) closeDrawer();
 }, { passive: true });
+document.body.style.visibility = 'visible';
